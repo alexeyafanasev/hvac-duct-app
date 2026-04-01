@@ -24,6 +24,7 @@ export default function ProjectPage() {
     height: "",
     length: "",
     quantity: "1",
+    insulated: false,
   });
 
   const [elbowForm, setElbowForm] = useState({
@@ -32,6 +33,7 @@ export default function ProjectPage() {
     angle: "90",
     radius: "",
     quantity: "1",
+    insulated: false,
   });
 
   const [transitionForm, setTransitionForm] = useState({
@@ -41,6 +43,7 @@ export default function ProjectPage() {
     height2: "",
     length: "",
     quantity: "1",
+    insulated: false,
   });
 
   const [offsetForm, setOffsetForm] = useState({
@@ -49,6 +52,7 @@ export default function ProjectPage() {
     offset: "",
     length: "",
     quantity: "1",
+    insulated: false,
   });
 
   useEffect(() => {
@@ -113,6 +117,7 @@ export default function ProjectPage() {
         height: item.height || "",
         length: item.length || "",
         quantity: item.quantity || "1",
+        insulated: item.insulated || false,       
       });
     }
 
@@ -123,6 +128,7 @@ export default function ProjectPage() {
         angle: item.angle || "90",
         radius: item.radius || "",
         quantity: item.quantity || "1",
+        insulated: item.insulated || false,   
       });
     }
 
@@ -134,6 +140,7 @@ export default function ProjectPage() {
         height2: item.height2 || "",
         length: item.length || "",
         quantity: item.quantity || "1",
+        insulated: item.insulated || false,
       });
     }
 
@@ -144,6 +151,7 @@ export default function ProjectPage() {
         offset: item.offset || "",
         length: item.length || "",
         quantity: item.quantity || "1",
+        insulated: item.insulated || false,
       });
     }
   };
@@ -198,6 +206,7 @@ export default function ProjectPage() {
       height: straightForm.height,
       length: straightForm.length,
       quantity: straightForm.quantity,
+      insulated: straightForm.insulated,
     };
 
     if (editingIndex !== null) {
@@ -213,6 +222,7 @@ export default function ProjectPage() {
       height: "",
       length: "",
       quantity: "1",
+      insulated: false,
     });
   };
 
@@ -234,6 +244,7 @@ export default function ProjectPage() {
       angle: elbowForm.angle,
       radius: elbowForm.radius,
       quantity: elbowForm.quantity,
+      insulated: straightForm.insulated,
     };
 
     if (editingIndex !== null) {
@@ -250,6 +261,7 @@ export default function ProjectPage() {
       angle: "90",
       radius: "",
       quantity: "1",
+      insulated: false,
     });
   };
 
@@ -273,6 +285,7 @@ export default function ProjectPage() {
       height2: transitionForm.height2,
       length: transitionForm.length,
       quantity: transitionForm.quantity,
+      insulated: straightForm.insulated,
     };
 
     if (editingIndex !== null) {
@@ -290,6 +303,7 @@ export default function ProjectPage() {
       height2: "",
       length: "",
       quantity: "1",
+      insulated: false,
     });
   };
 
@@ -311,6 +325,7 @@ export default function ProjectPage() {
       offset: offsetForm.offset,
       length: offsetForm.length,
       quantity: offsetForm.quantity,
+      insulated: straightForm.insulated,
     };
 
     if (editingIndex !== null) {
@@ -327,24 +342,25 @@ export default function ProjectPage() {
       offset: "",
       length: "",
       quantity: "1",
+      insulated: false,
     });
   };
 
   const renderItemLabel = (item) => {
     if (item.type === "Straight") {
-      return `Straight ${item.width}x${item.height} L${item.length} Qty ${item.quantity}`;
+        return `Straight ${item.width}x${item.height} L${item.length} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
     }
 
     if (item.type === "Elbow") {
-      return `Elbow ${item.width}x${item.height} ${item.angle}° R${item.radius} Qty ${item.quantity}`;
+        return `Elbow ${item.width}x${item.height} ${item.angle}° R${item.radius} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
     }
 
     if (item.type === "Transition") {
-      return `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2} L${item.length} Qty ${item.quantity}`;
+        return `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2} L${item.length} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
     }
 
     if (item.type === "Offset") {
-      return `Offset ${item.width}x${item.height} O${item.offset} L${item.length} Qty ${item.quantity}`;
+        return `Offset ${item.width}x${item.height} O${item.offset} L${item.length} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
     }
 
     return item.type;
@@ -365,71 +381,76 @@ export default function ProjectPage() {
     const tableRows = items.map((item, index) => {
       if (item.type === "Straight") {
         return [
-          index + 1,
-          "Straight",
-          item.width,
-          item.height,
-          item.length,
-          "-",
-          "-",
-          item.quantity,
-        ];
+            index + 1,
+            "Straight",
+            item.width,
+            item.height,
+            item.length,
+            "-",
+            "-",
+            item.insulated ? "Yes" : "No",
+            item.quantity,
+            ];
       }
 
       if (item.type === "Elbow") {
         return [
-          index + 1,
-          "Elbow",
-          item.width,
-          item.height,
-          "-",
-          item.angle,
-          item.radius,
-          item.quantity,
-        ];
+            index + 1,
+            "Elbow",
+            item.width,
+            item.height,
+            "-",
+            item.angle,
+            item.radius,
+            item.insulated ? "Yes" : "No",
+            item.quantity,
+            ];
       }
 
       if (item.type === "Transition") {
         return [
-          index + 1,
-          `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2}`,
-          "-",
-          "-",
-          item.length,
-          "-",
-          "-",
-          item.quantity,
-        ];
+            index + 1,
+            `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2}`,
+            "-",
+            "-",
+            item.length,
+            "-",
+            "-",
+            item.insulated ? "Yes" : "No",
+            item.quantity,
+            ];
       }
 
       if (item.type === "Offset") {
         return [
-          index + 1,
-          "Offset",
-          item.width,
-          item.height,
-          item.length,
-          `O${item.offset}`,
-          "-",
-          item.quantity,
+            index + 1,
+            "Offset",
+            item.width,
+            item.height,
+            item.length,
+            `O${item.offset}`,
+            "-",
+            item.insulated ? "Yes" : "No",
+            item.quantity,
         ];
       }
 
-      return [
-        index + 1,
-        item.type,
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        item.quantity || "-",
-      ];
+        return [
+            index + 1,
+            item.type,
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            item.insulated ? "Yes" : "No",
+            item.quantity || "-",
+        ];
     });
 
     autoTable(docPdf, {
       startY: 48,
-      head: [[
+        head: [[
         "#",
         "Type",
         "Width",
@@ -437,8 +458,9 @@ export default function ProjectPage() {
         "Length",
         "Angle/Offset",
         "Radius",
+        "Insulated",
         "Qty",
-      ]],
+        ]],
       body: tableRows,
       styles: {
         fontSize: 10,
@@ -645,6 +667,19 @@ export default function ProjectPage() {
             </div>
           </div>
 
+          <div className="flex items-center gap-3">
+            <input
+                id="straight-insulated"
+                type="checkbox"
+                checked={straightForm.insulated}
+                onChange={(e) => handleStraightChange("insulated", e.target.checked)}
+                className="h-5 w-5"
+            />
+            <label htmlFor="straight-insulated" className="font-medium">
+                Insulated
+            </label>
+            </div>
+
           <div className="space-y-3">
             <button
               onClick={handleAddStraight}
@@ -724,6 +759,19 @@ export default function ProjectPage() {
               />
             </div>
           </div>
+
+          <div className="flex items-center gap-3">
+            <input
+                id="straight-insulated"
+                type="checkbox"
+                checked={straightForm.insulated}
+                onChange={(e) => handleStraightChange("insulated", e.target.checked)}
+                className="h-5 w-5"
+            />
+            <label htmlFor="straight-insulated" className="font-medium">
+                Insulated
+            </label>
+            </div>
 
           <div className="space-y-3">
             <button
@@ -815,6 +863,19 @@ export default function ProjectPage() {
             </div>
           </div>
 
+          <div className="flex items-center gap-3">
+            <input
+                id="transition-insulated"
+                type="checkbox"
+                checked={transitionForm.insulated}
+                onChange={(e) => handleTransitionChange("insulated", e.target.checked)}
+                className="h-5 w-5"
+            />
+            <label htmlFor="transition-insulated" className="font-medium">
+                Insulated
+            </label>
+            </div>
+
           <div className="space-y-3">
             <button
               onClick={handleAddTransition}
@@ -893,6 +954,19 @@ export default function ProjectPage() {
               />
             </div>
           </div>
+
+          <div className="flex items-center gap-3">
+            <input
+                id="offset-insulated"
+                type="checkbox"
+                checked={offsetForm.insulated}
+                onChange={(e) => handleOffsetChange("insulated", e.target.checked)}
+                className="h-5 w-5"
+            />
+            <label htmlFor="offset-insulated" className="font-medium">
+                Insulated
+            </label>
+            </div>
 
           <div className="space-y-3">
             <button
