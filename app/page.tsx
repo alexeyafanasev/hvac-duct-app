@@ -12,8 +12,15 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
+type Project = {
+  id: string;
+  name: string;
+  items?: unknown[];
+  createdAt?: unknown;
+};
+
 export default function Home() {
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -23,9 +30,9 @@ export default function Home() {
     const q = query(projectsRef, orderBy("createdAt", "desc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const projectList = snapshot.docs.map((doc) => ({
+      const projectList: Project[] = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data(),
+        ...(doc.data() as Omit<Project, "id">),
       }));
 
       setProjects(projectList);
