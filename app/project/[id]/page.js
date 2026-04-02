@@ -6,6 +6,10 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { db } from "../../../lib/firebase";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import {
+  OffsetDrawing,
+  ElbowDrawing,
+} from "../../../components/FittingDrawings";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -34,6 +38,7 @@ export default function ProjectPage() {
     radius: "",
     quantity: "1",
     insulated: false,
+    bendType: "short",
   });
 
   const [transitionForm, setTransitionForm] = useState({
@@ -53,6 +58,7 @@ export default function ProjectPage() {
     length: "",
     quantity: "1",
     insulated: false,
+    direction: "right",
   });
 
   useEffect(() => {
@@ -117,7 +123,7 @@ export default function ProjectPage() {
         height: item.height || "",
         length: item.length || "",
         quantity: item.quantity || "1",
-        insulated: item.insulated || false,       
+        insulated: item.insulated || false,
       });
     }
 
@@ -128,7 +134,8 @@ export default function ProjectPage() {
         angle: item.angle || "90",
         radius: item.radius || "",
         quantity: item.quantity || "1",
-        insulated: item.insulated || false,   
+        insulated: item.insulated || false,
+        bendType: item.bendType || "short",
       });
     }
 
@@ -152,6 +159,7 @@ export default function ProjectPage() {
         length: item.length || "",
         quantity: item.quantity || "1",
         insulated: item.insulated || false,
+        direction: item.direction || "right",
       });
     }
   };
@@ -244,7 +252,8 @@ export default function ProjectPage() {
       angle: elbowForm.angle,
       radius: elbowForm.radius,
       quantity: elbowForm.quantity,
-      insulated: straightForm.insulated,
+      insulated: elbowForm.insulated,
+      bendType: elbowForm.bendType,
     };
 
     if (editingIndex !== null) {
@@ -262,6 +271,7 @@ export default function ProjectPage() {
       radius: "",
       quantity: "1",
       insulated: false,
+      bendType: "short",
     });
   };
 
@@ -285,7 +295,7 @@ export default function ProjectPage() {
       height2: transitionForm.height2,
       length: transitionForm.length,
       quantity: transitionForm.quantity,
-      insulated: straightForm.insulated,
+      insulated: transitionForm.insulated,
     };
 
     if (editingIndex !== null) {
@@ -325,7 +335,8 @@ export default function ProjectPage() {
       offset: offsetForm.offset,
       length: offsetForm.length,
       quantity: offsetForm.quantity,
-      insulated: straightForm.insulated,
+      insulated: offsetForm.insulated,
+      direction: offsetForm.direction,
     };
 
     if (editingIndex !== null) {
@@ -343,24 +354,27 @@ export default function ProjectPage() {
       length: "",
       quantity: "1",
       insulated: false,
+      direction: "right",
     });
   };
 
   const renderItemLabel = (item) => {
     if (item.type === "Straight") {
-        return `Straight ${item.width}x${item.height} L${item.length} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
+      return `Straight ${item.width}x${item.height} L${item.length} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
     }
 
     if (item.type === "Elbow") {
-        return `Elbow ${item.width}x${item.height} ${item.angle}° R${item.radius} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
+      return `Elbow ${item.width}x${item.height} ${item.angle}° R${item.radius} ${
+        item.bendType === "long" ? "Long Way" : "Short Way"
+      } Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
     }
 
     if (item.type === "Transition") {
-        return `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2} L${item.length} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
+      return `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2} L${item.length} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
     }
 
     if (item.type === "Offset") {
-        return `Offset ${item.width}x${item.height} O${item.offset} L${item.length} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
+      return `Offset ${item.width}x${item.height} O${item.offset} L${item.length} ${item.direction} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
     }
 
     return item.type;
@@ -381,76 +395,76 @@ export default function ProjectPage() {
     const tableRows = items.map((item, index) => {
       if (item.type === "Straight") {
         return [
-            index + 1,
-            "Straight",
-            item.width,
-            item.height,
-            item.length,
-            "-",
-            "-",
-            item.insulated ? "Yes" : "No",
-            item.quantity,
-            ];
+          index + 1,
+          "Straight",
+          item.width,
+          item.height,
+          item.length,
+          "-",
+          "-",
+          item.insulated ? "Yes" : "No",
+          item.quantity,
+        ];
       }
 
       if (item.type === "Elbow") {
         return [
-            index + 1,
-            "Elbow",
-            item.width,
-            item.height,
-            "-",
-            item.angle,
-            item.radius,
-            item.insulated ? "Yes" : "No",
-            item.quantity,
-            ];
+          index + 1,
+          `Elbow ${item.bendType === "long" ? "Long Way" : "Short Way"}`,
+          item.width,
+          item.height,
+          "-",
+          item.angle,
+          item.radius,
+          item.insulated ? "Yes" : "No",
+          item.quantity,
+        ];
       }
 
       if (item.type === "Transition") {
         return [
-            index + 1,
-            `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2}`,
-            "-",
-            "-",
-            item.length,
-            "-",
-            "-",
-            item.insulated ? "Yes" : "No",
-            item.quantity,
-            ];
+          index + 1,
+          `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2}`,
+          "-",
+          "-",
+          item.length,
+          "-",
+          "-",
+          item.insulated ? "Yes" : "No",
+          item.quantity,
+        ];
       }
 
       if (item.type === "Offset") {
         return [
-            index + 1,
-            "Offset",
-            item.width,
-            item.height,
-            item.length,
-            `O${item.offset}`,
-            "-",
-            item.insulated ? "Yes" : "No",
-            item.quantity,
+          index + 1,
+          `Offset ${item.direction}`,
+          item.width,
+          item.height,
+          item.length,
+          `O${item.offset}`,
+          "-",
+          item.insulated ? "Yes" : "No",
+          item.quantity,
         ];
       }
 
-        return [
-            index + 1,
-            item.type,
-            "-",
-            "-",
-            "-",
-            "-",
-            "-",
-            item.insulated ? "Yes" : "No",
-            item.quantity || "-",
-        ];
+      return [
+        index + 1,
+        item.type,
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        item.insulated ? "Yes" : "No",
+        item.quantity || "-",
+      ];
     });
 
     autoTable(docPdf, {
       startY: 48,
-        head: [[
+      head: [[
         "#",
         "Type",
         "Width",
@@ -460,10 +474,10 @@ export default function ProjectPage() {
         "Radius",
         "Insulated",
         "Qty",
-        ]],
+      ]],
       body: tableRows,
       styles: {
-        fontSize: 10,
+        fontSize: 9,
         cellPadding: 3,
       },
       headStyles: {
@@ -548,9 +562,9 @@ export default function ProjectPage() {
                   key={index}
                   className="border rounded-xl p-4 flex items-start justify-between gap-3"
                 >
-                  <p className="text-lg font-medium">
-                    {renderItemLabel(item)}
-                  </p>
+                  <div className="flex-1">
+                    <p className="text-lg font-medium">{renderItemLabel(item)}</p>
+                  </div>
 
                   <div className="shrink-0 flex flex-col gap-2">
                     <button
@@ -665,20 +679,22 @@ export default function ProjectPage() {
                 placeholder="1"
               />
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <input
+            <div className="flex items-center gap-3">
+              <input
                 id="straight-insulated"
                 type="checkbox"
                 checked={straightForm.insulated}
-                onChange={(e) => handleStraightChange("insulated", e.target.checked)}
+                onChange={(e) =>
+                  handleStraightChange("insulated", e.target.checked)
+                }
                 className="h-5 w-5"
-            />
-            <label htmlFor="straight-insulated" className="font-medium">
+              />
+              <label htmlFor="straight-insulated" className="font-medium">
                 Insulated
-            </label>
+              </label>
             </div>
+          </div>
 
           <div className="space-y-3">
             <button
@@ -701,6 +717,10 @@ export default function ProjectPage() {
       {selectedFitting === "Elbow" && (
         <>
           <h2 className="text-2xl font-semibold mb-4">Rectangular Elbow</h2>
+
+          <div className="mb-6 rounded-xl border p-4 bg-gray-50">
+            <ElbowDrawing bendType={elbowForm.bendType} />
+          </div>
 
           <div className="space-y-4 mb-6">
             <div>
@@ -738,6 +758,35 @@ export default function ProjectPage() {
             </div>
 
             <div>
+              <label className="block mb-2 font-medium">Bend Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleElbowChange("bendType", "short")}
+                  className={`rounded-xl border p-3 text-sm ${
+                    elbowForm.bendType === "short"
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-gray-300"
+                  }`}
+                >
+                  Short Way
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleElbowChange("bendType", "long")}
+                  className={`rounded-xl border p-3 text-sm ${
+                    elbowForm.bendType === "long"
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-gray-300"
+                  }`}
+                >
+                  Long Way
+                </button>
+              </div>
+            </div>
+
+            <div>
               <label className="block mb-1 font-medium">Radius</label>
               <input
                 type="number"
@@ -758,20 +807,22 @@ export default function ProjectPage() {
                 placeholder="1"
               />
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <input
-                id="straight-insulated"
+            <div className="flex items-center gap-3">
+              <input
+                id="elbow-insulated"
                 type="checkbox"
-                checked={straightForm.insulated}
-                onChange={(e) => handleStraightChange("insulated", e.target.checked)}
+                checked={elbowForm.insulated}
+                onChange={(e) =>
+                  handleElbowChange("insulated", e.target.checked)
+                }
                 className="h-5 w-5"
-            />
-            <label htmlFor="straight-insulated" className="font-medium">
+              />
+              <label htmlFor="elbow-insulated" className="font-medium">
                 Insulated
-            </label>
+              </label>
             </div>
+          </div>
 
           <div className="space-y-3">
             <button
@@ -801,7 +852,9 @@ export default function ProjectPage() {
               <input
                 type="number"
                 value={transitionForm.width1}
-                onChange={(e) => handleTransitionChange("width1", e.target.value)}
+                onChange={(e) =>
+                  handleTransitionChange("width1", e.target.value)
+                }
                 className="w-full border rounded-xl p-3"
                 placeholder="14"
               />
@@ -812,7 +865,9 @@ export default function ProjectPage() {
               <input
                 type="number"
                 value={transitionForm.height1}
-                onChange={(e) => handleTransitionChange("height1", e.target.value)}
+                onChange={(e) =>
+                  handleTransitionChange("height1", e.target.value)
+                }
                 className="w-full border rounded-xl p-3"
                 placeholder="10"
               />
@@ -823,7 +878,9 @@ export default function ProjectPage() {
               <input
                 type="number"
                 value={transitionForm.width2}
-                onChange={(e) => handleTransitionChange("width2", e.target.value)}
+                onChange={(e) =>
+                  handleTransitionChange("width2", e.target.value)
+                }
                 className="w-full border rounded-xl p-3"
                 placeholder="10"
               />
@@ -834,7 +891,9 @@ export default function ProjectPage() {
               <input
                 type="number"
                 value={transitionForm.height2}
-                onChange={(e) => handleTransitionChange("height2", e.target.value)}
+                onChange={(e) =>
+                  handleTransitionChange("height2", e.target.value)
+                }
                 className="w-full border rounded-xl p-3"
                 placeholder="8"
               />
@@ -845,7 +904,9 @@ export default function ProjectPage() {
               <input
                 type="number"
                 value={transitionForm.length}
-                onChange={(e) => handleTransitionChange("length", e.target.value)}
+                onChange={(e) =>
+                  handleTransitionChange("length", e.target.value)
+                }
                 className="w-full border rounded-xl p-3"
                 placeholder="12"
               />
@@ -856,25 +917,29 @@ export default function ProjectPage() {
               <input
                 type="number"
                 value={transitionForm.quantity}
-                onChange={(e) => handleTransitionChange("quantity", e.target.value)}
+                onChange={(e) =>
+                  handleTransitionChange("quantity", e.target.value)
+                }
                 className="w-full border rounded-xl p-3"
                 placeholder="1"
               />
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <input
+            <div className="flex items-center gap-3">
+              <input
                 id="transition-insulated"
                 type="checkbox"
                 checked={transitionForm.insulated}
-                onChange={(e) => handleTransitionChange("insulated", e.target.checked)}
+                onChange={(e) =>
+                  handleTransitionChange("insulated", e.target.checked)
+                }
                 className="h-5 w-5"
-            />
-            <label htmlFor="transition-insulated" className="font-medium">
+              />
+              <label htmlFor="transition-insulated" className="font-medium">
                 Insulated
-            </label>
+              </label>
             </div>
+          </div>
 
           <div className="space-y-3">
             <button
@@ -897,6 +962,10 @@ export default function ProjectPage() {
       {selectedFitting === "Offset" && (
         <>
           <h2 className="text-2xl font-semibold mb-4">Rectangular Offset</h2>
+
+          <div className="mb-6 rounded-xl border p-4 bg-gray-50">
+            <OffsetDrawing direction={offsetForm.direction} />
+          </div>
 
           <div className="space-y-4 mb-6">
             <div>
@@ -933,6 +1002,59 @@ export default function ProjectPage() {
             </div>
 
             <div>
+              <label className="block mb-2 font-medium">Direction</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOffsetChange("direction", "left")}
+                  className={`rounded-xl border p-3 text-sm ${
+                    offsetForm.direction === "left"
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-gray-300"
+                  }`}
+                >
+                  Left
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOffsetChange("direction", "right")}
+                  className={`rounded-xl border p-3 text-sm ${
+                    offsetForm.direction === "right"
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-gray-300"
+                  }`}
+                >
+                  Right
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOffsetChange("direction", "up")}
+                  className={`rounded-xl border p-3 text-sm ${
+                    offsetForm.direction === "up"
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-gray-300"
+                  }`}
+                >
+                  Up
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOffsetChange("direction", "down")}
+                  className={`rounded-xl border p-3 text-sm ${
+                    offsetForm.direction === "down"
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-gray-300"
+                  }`}
+                >
+                  Down
+                </button>
+              </div>
+            </div>
+
+            <div>
               <label className="block mb-1 font-medium">Length</label>
               <input
                 type="number"
@@ -953,20 +1075,22 @@ export default function ProjectPage() {
                 placeholder="1"
               />
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <input
+            <div className="flex items-center gap-3">
+              <input
                 id="offset-insulated"
                 type="checkbox"
                 checked={offsetForm.insulated}
-                onChange={(e) => handleOffsetChange("insulated", e.target.checked)}
+                onChange={(e) =>
+                  handleOffsetChange("insulated", e.target.checked)
+                }
                 className="h-5 w-5"
-            />
-            <label htmlFor="offset-insulated" className="font-medium">
+              />
+              <label htmlFor="offset-insulated" className="font-medium">
                 Insulated
-            </label>
+              </label>
             </div>
+          </div>
 
           <div className="space-y-3">
             <button
