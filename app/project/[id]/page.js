@@ -719,7 +719,13 @@ export default function ProjectPage() {
           <h2 className="text-2xl font-semibold mb-4">Rectangular Elbow</h2>
 
           <div className="mb-6 rounded-xl border p-4 bg-gray-50">
-            <ElbowDrawing bendType={elbowForm.bendType} />
+            <ElbowDrawing
+                bendType={elbowForm.bendType}
+                width={elbowForm.width}
+                height={elbowForm.height}
+                radius={elbowForm.radius}
+                angle={elbowForm.angle}
+            />
           </div>
 
           <div className="space-y-4 mb-6">
@@ -964,7 +970,13 @@ export default function ProjectPage() {
           <h2 className="text-2xl font-semibold mb-4">Rectangular Offset</h2>
 
           <div className="mb-6 rounded-xl border p-4 bg-gray-50">
-            <OffsetDrawing direction={offsetForm.direction} />
+            <OffsetDrawing
+                direction={offsetForm.direction}
+                width={offsetForm.width}
+                height={offsetForm.height}
+                length={offsetForm.length}
+                offset={offsetForm.offset}
+            />
           </div>
 
           <div className="space-y-4 mb-6">
