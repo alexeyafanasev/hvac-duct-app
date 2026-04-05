@@ -621,7 +621,7 @@ export default function ProjectPage() {
     }
 
     // можно потом освободить память
-    //setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
     };
 
