@@ -12,8 +12,10 @@ import {
   ElbowDrawing,
   TransitionDrawing,
 } from "../../../components/FittingDrawings";
-import { StraightFlatPattern } from "../../../components/FabricationDrawings";
-
+import {
+  StraightFlatPattern,
+  ElbowFlatPattern,
+} from "../../../components/FabricationDrawings";
 export default function ProjectPage() {
   const params = useParams();
   const router = useRouter();
@@ -408,56 +410,56 @@ export default function ProjectPage() {
     return item.type;
   };
 
-  const renderFabricationDrawing = (item) => {
-    if (item.type === "Straight") {
-        return (
-        <StraightFlatPattern
-            width={item.width}
-            height={item.height}
-            length={item.length}
-        />
-        );
-    }
+    const renderFabricationDrawing = (item) => {
+        if (item.type === "Straight") {
+            return (
+            <StraightFlatPattern
+                width={item.width}
+                height={item.height}
+                length={item.length}
+            />
+            );
+        }
 
-    if (item.type === "Elbow") {
-        return (
-        <ElbowDrawing
-            bendType={item.bendType}
-            width={item.width}
-            height={item.height}
-            radius={item.radius}
-            angle={item.angle}
-        />
-        );
-    }
+        if (item.type === "Elbow") {
+            return (
+            <ElbowFlatPattern
+                width={item.width}
+                height={item.height}
+                radius={item.radius}
+                angle={item.angle}
+                bendType={item.bendType}
+            />
+            );
+        }
 
-    if (item.type === "Transition") {
-        return (
-        <TransitionDrawing
-            justification={item.justification}
-            width1={item.width1}
-            height1={item.height1}
-            width2={item.width2}
-            height2={item.height2}
-            length={item.length}
-        />
-        );
-    }
+        if (item.type === "Transition") {
+            return (
+            <TransitionDrawing
+                justification={item.justification}
+                width1={item.width1}
+                height1={item.height1}
+                width2={item.width2}
+                height2={item.height2}
+                length={item.length}
+            />
+            );
+        }
 
-    if (item.type === "Offset") {
-        return (
-        <OffsetDrawing
-            direction={item.direction}
-            width={item.width}
-            height={item.height}
-            length={item.length}
-            offset={item.offset}
-        />
-        );
-    }
+        if (item.type === "Offset") {
+            return (
+            <OffsetDrawing
+                direction={item.direction}
+                width={item.width}
+                height={item.height}
+                length={item.length}
+                offset={item.offset}
+            />
+            );
+        }
 
-    return <div>Drawing not available</div>;
-    };
+        return <div>Drawing not available</div>;
+        };
 
     const getPdfItemFields = (item) => {
         if (item.type === "Straight") {
@@ -631,6 +633,11 @@ export default function ProjectPage() {
     window.location.href = mailtoLink;
     };
 
+    const handleBackFromForm = () => {
+        setSelectedFitting(null);
+        setEditingIndex(null);
+        };
+
   return (
     <main className="p-6 max-w-xl mx-auto">
       <button
@@ -710,19 +717,7 @@ export default function ProjectPage() {
 
                     {activeDrawingIndex === index && (
                     <div className="p-4 border rounded-xl bg-gray-50">
-                        {item.type === "Straight" && (
-                        <StraightFlatPattern
-                            width={item.width}
-                            height={item.height}
-                            length={item.length}
-                        />
-                        )}
-
-                        {item.type !== "Straight" && (
-                        <p className="text-gray-500">
-                            Fabrication drawing for {item.type} coming next.
-                        </p>
-                        )}
+                        {renderFabricationDrawing(item)}
                     </div>
                     )}
                 </div>
