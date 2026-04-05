@@ -604,7 +604,25 @@ export default function ProjectPage() {
     }
 
     const fileName = `${project.name.replace(/\s+/g, "_")}_duct_order.pdf`;
+
+    const blob = docPdf.output("blob");
+    const blobUrl = URL.createObjectURL(blob);
+
+    // для телефона лучше открыть PDF, чем пытаться сразу скачать
+    const isMobile =
+    /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
+        navigator.userAgent
+    );
+
+    if (isMobile) {
+    window.open(blobUrl, "_blank");
+    } else {
     docPdf.save(fileName);
+    }
+
+    // можно потом освободить память
+    //setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
     };
 
     const handleSendToShop = () => {
