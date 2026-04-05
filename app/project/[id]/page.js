@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toPng } from "html-to-image";
 import { useParams, useRouter } from "next/navigation";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -11,6 +12,7 @@ import {
   ElbowDrawing,
   TransitionDrawing,
 } from "../../../components/FittingDrawings";
+import { StraightFlatPattern } from "../../../components/FabricationDrawings";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -21,6 +23,9 @@ export default function ProjectPage() {
   const [showFittingSelector, setShowFittingSelector] = useState(false);
   const [selectedFitting, setSelectedFitting] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [activeDrawingIndex, setActiveDrawingIndex] = useState(null);
+
+  const exportDrawingsRef = useRef(null);
 
   const shopEmail = "shop@hvacshop.ca";
 
@@ -403,145 +408,228 @@ export default function ProjectPage() {
     return item.type;
   };
 
-  const handleExportPDF = () => {
+  const renderFabricationDrawing = (item) => {
+    if (item.type === "Straight") {
+        return (
+        <StraightFlatPattern
+            width={item.width}
+            height={item.height}
+            length={item.length}
+        />
+        );
+    }
+
+    if (item.type === "Elbow") {
+        return (
+        <ElbowDrawing
+            bendType={item.bendType}
+            width={item.width}
+            height={item.height}
+            radius={item.radius}
+            angle={item.angle}
+        />
+        );
+    }
+
+    if (item.type === "Transition") {
+        return (
+        <TransitionDrawing
+            justification={item.justification}
+            width1={item.width1}
+            height1={item.height1}
+            width2={item.width2}
+            height2={item.height2}
+            length={item.length}
+        />
+        );
+    }
+
+    if (item.type === "Offset") {
+        return (
+        <OffsetDrawing
+            direction={item.direction}
+            width={item.width}
+            height={item.height}
+            length={item.length}
+            offset={item.offset}
+        />
+        );
+    }
+
+    return <div>Drawing not available</div>;
+    };
+
+    const getPdfItemFields = (item) => {
+        if (item.type === "Straight") {
+            return [
+            ["Type", "Straight"],
+            ["Width", item.width || "-"],
+            ["Heigh", item.height || "-"],
+            ["Length", item.length || "-"],
+            ["Quantity", item.quantity || "-"],
+            ["Insulation", item.insulated ? "Yes" : "No"],
+            ];
+        }
+
+        if (item.type === "Elbow") {
+            return [
+            ["Type", "Elbow"],
+            ["Width", item.width || "-"],
+            ["Heigh", item.height || "-"],
+            ["Angle", item.angle || "-"],
+            ["Radius", item.radius || "-"],
+            ["Bend type", item.bendType === "long" ? "Long Way" : "Short Way"],
+            ["Quantity", item.quantity || "-"],
+            ["Insulation", item.insulated ? "Yes" : "No"],
+            ];
+        }
+
+        if (item.type === "Transition") {
+            return [
+            ["Type", "Transition"],
+            ["Width 1", item.width1 || "-"],
+            ["Heigh 1", item.height1 || "-"],
+            ["Width 2", item.width2 || "-"],
+            ["Heigh 2", item.height2 || "-"],
+            ["Length", item.length || "-"],
+            ["Transition type", getTransitionLabel(item.justification || "center")],
+            ["Quantity", item.quantity || "-"],
+            ["Insulation", item.insulated ? "Да" : "Нет"],
+            ];
+        }
+
+        if (item.type === "Offset") {
+            return [
+            ["Type", "Offset"],
+            ["Width", item.width || "-"],
+            ["Heigh", item.height || "-"],
+            ["Offset", item.offset || "-"],
+            ["Length", item.length || "-"],
+            ["Direction", item.direction || "-"],
+            ["Quantity", item.quantity || "-"],
+            ["Insulation", item.insulated ? "Yes" : "No"],
+            ];
+        }
+
+        return [["Type", item.type || "-"]];
+        };
+
+    const handleExportPDF = async () => {
     if (!project) return;
 
     const docPdf = new jsPDF();
+    let currentY = 20;
 
     docPdf.setFontSize(18);
-    docPdf.text("HVAC Duct Order", 14, 20);
+    docPdf.text("HVAC Duct Order", 14, currentY);
 
+    currentY += 10;
     docPdf.setFontSize(12);
-    docPdf.text(`Project: ${project.name}`, 14, 30);
-    docPdf.text(`Total items: ${items.length}`, 14, 38);
+    docPdf.text(`Project: ${project.name}`, 14, currentY);
 
-    const tableRows = items.map((item, index) => {
-      if (item.type === "Straight") {
-        return [
-          index + 1,
-          "Straight",
-          item.width,
-          item.height,
-          item.length,
-          "-",
-          "-",
-          item.insulated ? "Yes" : "No",
-          item.quantity,
-        ];
-      }
+    currentY += 8;
+    docPdf.text(`Total items: ${items.length}`, 14, currentY);
 
-      if (item.type === "Elbow") {
-        return [
-          index + 1,
-          `Elbow ${item.bendType === "long" ? "Long Way" : "Short Way"}`,
-          item.width,
-          item.height,
-          "-",
-          item.angle,
-          item.radius,
-          item.insulated ? "Yes" : "No",
-          item.quantity,
-        ];
-      }
+    currentY += 12;
 
-      if (item.type === "Transition") {
-        return [
-          index + 1,
-          `Transition ${getTransitionLabel(
-            item.justification || "center"
-          )} ${item.width1}x${item.height1} -> ${item.width2}x${item.height2}`,
-          "-",
-          "-",
-          item.length,
-          "-",
-          "-",
-          item.insulated ? "Yes" : "No",
-          item.quantity,
-        ];
-      }
+    for (let index = 0; index < items.length; index++) {
+        const item = items[index];
 
-      if (item.type === "Offset") {
-        return [
-          index + 1,
-          `Offset ${item.direction}`,
-          item.width,
-          item.height,
-          item.length,
-          `O${item.offset}`,
-          "-",
-          item.insulated ? "Yes" : "No",
-          item.quantity,
-        ];
-      }
+        if (currentY > 230) {
+        docPdf.addPage();
+        currentY = 20;
+        }
 
-      return [
-        index + 1,
-        item.type,
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        item.insulated ? "Yes" : "No",
-        item.quantity || "-",
-      ];
-    });
+        docPdf.setFontSize(13);
+        docPdf.setFont(undefined, "bold");
+        docPdf.text(`Item ${index + 1}`, 14, currentY);
+        docPdf.setFont(undefined, "normal");
 
-    autoTable(docPdf, {
-      startY: 48,
-      head: [[
-        "#",
-        "Type",
-        "Width",
-        "Height",
-        "Length",
-        "Angle/Offset",
-        "Radius",
-        "Insulated",
-        "Qty",
-      ]],
-      body: tableRows,
-      styles: {
-        fontSize: 9,
-        cellPadding: 3,
-      },
-      headStyles: {
-        fillColor: [41, 128, 185],
-      },
-    });
+        currentY += 4;
+
+        const fields = getPdfItemFields(item);
+
+        autoTable(docPdf, {
+        startY: currentY,
+        body: fields,
+        theme: "grid",
+        styles: {
+            fontSize: 10,
+            cellPadding: 2.5,
+        },
+        columnStyles: {
+            0: { cellWidth: 55, fontStyle: "bold" },
+            1: { cellWidth: 110 },
+        },
+        margin: { left: 14, right: 14 },
+        });
+
+        currentY = docPdf.lastAutoTable.finalY + 8;
+
+        const drawingNode = document.getElementById(`pdf-drawing-${index}`);
+
+        if (drawingNode) {
+        try {
+            const dataUrl = await toPng(drawingNode, {
+            cacheBust: true,
+            pixelRatio: 2,
+            backgroundColor: "#ffffff",
+            });
+
+            const imgWidth = 170;
+            const imgHeight = 95;
+
+            if (currentY + imgHeight > 280) {
+            docPdf.addPage();
+            currentY = 20;
+            }
+
+            docPdf.addImage(dataUrl, "PNG", 14, currentY, imgWidth, imgHeight);
+            currentY += imgHeight + 12;
+        } catch (error) {
+            console.error("Could not export drawing image:", error);
+            docPdf.setTextColor(200, 0, 0);
+            docPdf.text("Drawing export failed for this item.", 14, currentY);
+            docPdf.setTextColor(0, 0, 0);
+            currentY += 10;
+        }
+        } else {
+        docPdf.setTextColor(200, 0, 0);
+        docPdf.text("Drawing not found for this item.", 14, currentY);
+        docPdf.setTextColor(0, 0, 0);
+        currentY += 10;
+        }
+    }
 
     const fileName = `${project.name.replace(/\s+/g, "_")}_duct_order.pdf`;
     docPdf.save(fileName);
-  };
+    };
 
-  const handleSendToShop = () => {
-    if (!project) return;
+    const handleSendToShop = () => {
+        if (!project) return;
 
-    const subject = `HVAC Duct Order - ${project.name}`;
+        const subject = `HVAC Duct Order - ${project.name}`;
 
-    let body = `Project: ${project.name}\n`;
-    body += `Total items: ${items.length}\n\n`;
-    body += `Items:\n`;
+        let body = `Project: ${project.name}\n`;
+        body += `Total items: ${items.length}\n\n`;
+        body += `Items:\n\n`;
 
-    if (items.length === 0) {
-      body += "No items in order.\n";
-    } else {
-      items.forEach((item, index) => {
-        body += `${index + 1}. ${renderItemLabel(item)}\n`;
-      });
+        if (items.length === 0) {
+            body += "No items in order.\n";
+        } else {
+            items.forEach((item, index) => {
+            body += `${index + 1}. ${renderItemLabel(item)}\n`;
+            });
     }
 
+    body += `\nPlease attach the exported PDF with drawings before sending.\n`;
+
     const mailtoLink = `mailto:${shopEmail}?subject=${encodeURIComponent(
-      subject
+        subject
     )}&body=${encodeURIComponent(body)}`;
 
     window.location.href = mailtoLink;
-  };
-
-  const handleBackFromForm = () => {
-    setSelectedFitting(null);
-    setEditingIndex(null);
-  };
+    };
 
   return (
     <main className="p-6 max-w-xl mx-auto">
@@ -586,31 +674,59 @@ export default function ProjectPage() {
           ) : (
             <div className="space-y-3">
               {items.map((item, index) => (
-                <div
-                  key={index}
-                  className="border rounded-xl p-4 flex items-start justify-between gap-3"
-                >
-                  <div className="flex-1">
-                    <p className="text-lg font-medium">{renderItemLabel(item)}</p>
-                  </div>
+                <div key={index} className="space-y-3">
+                    <div className="border rounded-xl p-4 flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                        <p className="text-lg font-medium">{renderItemLabel(item)}</p>
+                    </div>
 
-                  <div className="shrink-0 flex flex-col gap-2">
-                    <button
-                      onClick={() => handleEditItem(item, index)}
-                      className="border border-blue-300 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-50"
-                    >
-                      Edit
-                    </button>
+                    <div className="shrink-0 flex flex-col gap-2">
+                        <button
+                        onClick={() => handleEditItem(item, index)}
+                        className="border border-blue-300 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-50"
+                        >
+                        Edit
+                        </button>
 
-                    <button
-                      onClick={() => handleDeleteItem(index)}
-                      className="border border-red-300 text-red-600 px-3 py-1 rounded-lg hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                        <button
+                        onClick={() => handleDeleteItem(index)}
+                        className="border border-red-300 text-red-600 px-3 py-1 rounded-lg hover:bg-red-50"
+                        >
+                        Delete
+                        </button>
+
+                        <button
+                        onClick={() =>
+                            setActiveDrawingIndex(
+                            activeDrawingIndex === index ? null : index
+                            )
+                        }
+                        className="border border-gray-400 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-100"
+                        >
+                        Drawing
+                        </button>
+                    </div>
+                    </div>
+
+                    {activeDrawingIndex === index && (
+                    <div className="p-4 border rounded-xl bg-gray-50">
+                        {item.type === "Straight" && (
+                        <StraightFlatPattern
+                            width={item.width}
+                            height={item.height}
+                            length={item.length}
+                        />
+                        )}
+
+                        {item.type !== "Straight" && (
+                        <p className="text-gray-500">
+                            Fabrication drawing for {item.type} coming next.
+                        </p>
+                        )}
+                    </div>
+                    )}
                 </div>
-              ))}
+                ))}
             </div>
           )}
         </>
@@ -1197,6 +1313,46 @@ export default function ProjectPage() {
           </div>
         </>
       )}
+
+      <div
+        ref={exportDrawingsRef}
+        style={{
+            position: "absolute",
+            left: "-99999px",
+            top: 0,
+            width: "900px",
+            background: "#ffffff",
+            padding: "20px",
+        }}
+        >
+        {items.map((item, index) => (
+            <div
+            key={`pdf-drawing-${index}`}
+            id={`pdf-drawing-${index}`}
+            style={{
+                width: "820px",
+                background: "#ffffff",
+                padding: "16px",
+                marginBottom: "24px",
+                border: "1px solid #e5e7eb",
+            }}
+            >
+            <div
+                style={{
+                fontSize: "18px",
+                fontWeight: 600,
+                marginBottom: "12px",
+                color: "#111827",
+                }}
+            >
+                {index + 1}. {renderItemLabel(item)}
+            </div>
+
+            {renderFabricationDrawing(item)}
+            </div>
+        ))}
+        </div>
+    
     </main>
   );
 }
