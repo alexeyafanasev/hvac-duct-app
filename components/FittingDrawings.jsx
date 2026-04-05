@@ -517,7 +517,7 @@ export function ElbowDrawing({
               {width || "-"}
             </text>
 
-            <text x="210" y="93" fontSize="16" fontWeight="700" fill="#b91c1c">
+            <text x="203" y="93" fontSize="16" fontWeight="700" fill="#b91c1c">
               {height || "-"}
             </text>
 

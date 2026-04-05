@@ -263,239 +263,281 @@ export function ElbowFlatPattern({
 
   const angleRad = (a * Math.PI) / 180;
 
-  // Упрощённая логика:
-  // short way -> поворот по width
-  // long way  -> поворот по height
+  // Short Way: поворот по ширине
+  // Long Way: поворот по высоте
   const turningSize = bendType === "long" ? h : w;
-  const fixedSize = bendType === "long" ? w : h;
+  const fixedSide = bendType === "long" ? w : h;
 
   const innerArc = angleRad * r;
-  const centerArc = angleRad * (r + turningSize / 2);
   const outerArc = angleRad * (r + turningSize);
 
-  const maxDrawWidth = 720;
-  const maxDrawHeight = 220;
+  // ===== Drawing scale =====
+  const maxSectorBox = 250; // коробка для одной кривой детали
+  const maxRectWidth = 300;
+  const maxRectHeight = 100;
 
-  const realPatternWidth = outerArc || 1;
-  const realPatternHeight = fixedSize * 4 || 1;
-
-  const scale = Math.min(
-    maxDrawWidth / realPatternWidth,
-    maxDrawHeight / realPatternHeight
+  const sectorScale = Math.min(
+    maxSectorBox / Math.max(r + turningSize, 1),
+    maxSectorBox / Math.max(r + turningSize, 1)
   );
 
-  const drawInner = innerArc * scale;
-  const drawCenter = centerArc * scale;
-  const drawOuter = outerArc * scale;
+  const rectScale = Math.min(
+    maxRectWidth / Math.max(outerArc, 1),
+    maxRectHeight / Math.max(fixedSide, 1)
+  );
 
-  const panelH = fixedSize * scale;
+  const scale = Math.min(sectorScale, rectScale);
 
-  const x0 = 40;
-  const y0 = 70;
+  const innerR = r * scale;
+  const outerR = (r + turningSize) * scale;
 
-  const y1 = y0 + panelH;
-  const y2 = y1 + panelH;
-  const y3 = y2 + panelH;
-  const y4 = y3 + panelH;
+  const innerRectW = innerArc * scale;
+  const outerRectW = outerArc * scale;
+  const rectH = fixedSide * scale;
+
+  // ===== SVG helpers =====
+  const polar = (cx, cy, radiusValue, deg) => {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return {
+      x: cx + radiusValue * Math.cos(rad),
+      y: cy + radiusValue * Math.sin(rad),
+    };
+  };
+
+  const makeSectorPath = (cx, cy, rInner, rOuter, startDeg, endDeg) => {
+    const outerStart = polar(cx, cy, rOuter, startDeg);
+    const outerEnd = polar(cx, cy, rOuter, endDeg);
+    const innerEnd = polar(cx, cy, rInner, endDeg);
+    const innerStart = polar(cx, cy, rInner, startDeg);
+
+    const largeArcFlag = endDeg - startDeg <= 180 ? 0 : 1;
+
+    return `
+      M ${outerStart.x} ${outerStart.y}
+      A ${rOuter} ${rOuter} 0 ${largeArcFlag} 1 ${outerEnd.x} ${outerEnd.y}
+      L ${innerEnd.x} ${innerEnd.y}
+      A ${rInner} ${rInner} 0 ${largeArcFlag} 0 ${innerStart.x} ${innerStart.y}
+      Z
+    `;
+  };
+
+  const sectorPath = makeSectorPath(0, 0, innerR, outerR, 0, a);
+
+  // ===== Layout positions =====
+  const sectorBoxX1 = 60;
+  const sectorBoxY1 = 90;
+
+  const sectorBoxX2 = 360;
+  const sectorBoxY2 = 90;
+
+  const rectX = 650;
+  const innerRectY = 110;
+  const outerRectY = 240;
 
   return (
     <div className={className}>
       <svg
-        viewBox="0 0 900 420"
+        viewBox="0 0 980 430"
         className="w-full h-auto border rounded-xl bg-white"
       >
-        <text x="40" y="26" fontSize="18" fontWeight="600" fill="#111827">
+        <text x="30" y="26" fontSize="18" fontWeight="600" fill="#111827">
           Elbow Flat Pattern
         </text>
 
-        <text x="40" y="46" fontSize="12" fill="#4B5563">
-          Approximate panel development · {bendType === "long" ? "Long Way" : "Short Way"}
+        <text x="30" y="64" fontSize="12" fill="#4B5563">
+          Angle = {a}°, Radius = {r}, Width = {w}, Height = {h}, Bend Type ={" "}
+          {bendType === "long" ? "Long Way" : "Short Way"}
         </text>
 
-        <text x="40" y="62" fontSize="12" fill="#4B5563">
-          Angle = {a}°, Radius = {r}, Width = {w}, Height = {h}
-        </text>
+        {/* ===== Curved piece 1 ===== */}
+        <g transform={`translate(${sectorBoxX1 + 60}, ${sectorBoxY1 + outerR})`}>
+          <path
+            d={sectorPath}
+            fill="#F9FAFB"
+            stroke="#111827"
+            strokeWidth="2"
+          />
+        </g>
 
-        {/* Panel 1 */}
-        <polygon
-          points={`
-            ${x0},${y0}
-            ${x0 + drawOuter},${y0}
-            ${x0 + drawInner},${y1}
-            ${x0},${y1}
-          `}
-          fill="#F9FAFB"
-          stroke="#111827"
-          strokeWidth="2"
-        />
-
-        {/* Panel 2 */}
-        <polygon
-          points={`
-            ${x0},${y1}
-            ${x0 + drawInner},${y1}
-            ${x0 + drawOuter},${y2}
-            ${x0},${y2}
-          `}
-          fill="#F3F4F6"
-          stroke="#111827"
-          strokeWidth="2"
-        />
-
-        {/* Panel 3 */}
-        <polygon
-          points={`
-            ${x0},${y2}
-            ${x0 + drawOuter},${y2}
-            ${x0 + drawInner},${y3}
-            ${x0},${y3}
-          `}
-          fill="#F9FAFB"
-          stroke="#111827"
-          strokeWidth="2"
-        />
-
-        {/* Panel 4 */}
-        <polygon
-          points={`
-            ${x0},${y3}
-            ${x0 + drawInner},${y3}
-            ${x0 + drawOuter},${y4}
-            ${x0},${y4}
-          `}
-          fill="#F3F4F6"
-          stroke="#111827"
-          strokeWidth="2"
-        />
-
-        {/* horizontal separators */}
-        <line x1={x0} y1={y1} x2={x0 + drawOuter} y2={y1} stroke="#6B7280" strokeDasharray="6 4" />
-        <line x1={x0} y1={y2} x2={x0 + drawOuter} y2={y2} stroke="#6B7280" strokeDasharray="6 4" />
-        <line x1={x0} y1={y3} x2={x0 + drawOuter} y2={y3} stroke="#6B7280" strokeDasharray="6 4" />
-
-        {/* panel labels */}
-        <text x={x0 + 8} y={y0 + panelH / 2} fontSize="14" fontWeight="600" fill="#111827">
-          Panel 1
-        </text>
-        <text x={x0 + 8} y={y1 + panelH / 2} fontSize="14" fontWeight="600" fill="#111827">
-          Panel 2
-        </text>
-        <text x={x0 + 8} y={y2 + panelH / 2} fontSize="14" fontWeight="600" fill="#111827">
-          Panel 3
-        </text>
-        <text x={x0 + 8} y={y3 + panelH / 2} fontSize="14" fontWeight="600" fill="#111827">
-          Panel 4
-        </text>
-
-        {/* outer arc dimension */}
-        <line
-          x1={x0}
-          y1={y0 - 20}
-          x2={x0 + drawOuter}
-          y2={y0 - 20}
-          stroke="#111827"
-          strokeWidth="1.5"
-        />
-        <line x1={x0} y1={y0 - 26} x2={x0} y2={y0 - 14} stroke="#111827" strokeWidth="1.5" />
-        <line
-          x1={x0 + drawOuter}
-          y1={y0 - 26}
-          x2={x0 + drawOuter}
-          y2={y0 - 14}
-          stroke="#111827"
-          strokeWidth="1.5"
-        />
         <text
-          x={x0 + drawOuter / 2}
-          y={y0 - 28}
+          x={sectorBoxX1 }
+          y={sectorBoxY1 + outerR + 30}
           textAnchor="middle"
-          fontSize="13"
-          fill="#111827"
-        >
-          Outer Arc = {outerArc ? outerArc.toFixed(2) : "-"}
-        </text>
-
-        {/* inner arc dimension */}
-        <line
-          x1={x0}
-          y1={y4 + 20}
-          x2={x0 + drawInner}
-          y2={y4 + 20}
-          stroke="#111827"
-          strokeWidth="1.5"
-        />
-        <line x1={x0} y1={y4 + 14} x2={x0} y2={y4 + 26} stroke="#111827" strokeWidth="1.5" />
-        <line
-          x1={x0 + drawInner}
-          y1={y4 + 14}
-          x2={x0 + drawInner}
-          y2={y4 + 26}
-          stroke="#111827"
-          strokeWidth="1.5"
-        />
-        <text
-          x={x0 + drawInner / 2}
-          y={y4 + 38}
-          textAnchor="middle"
-          fontSize="13"
-          fill="#111827"
-        >
-          Inner Arc = {innerArc ? innerArc.toFixed(2) : "-"}
-        </text>
-
-        {/* center arc label */}
-        <text
-          x={x0 + drawCenter + 20}
-          y={y2}
           fontSize="14"
           fontWeight="600"
-          fill="#B91C1C"
-        >
-          Center Arc = {centerArc ? centerArc.toFixed(2) : "-"}
-        </text>
-
-        {/* panel height dimension */}
-        <line
-          x1={x0 + drawOuter + 40}
-          y1={y0}
-          x2={x0 + drawOuter + 40}
-          y2={y1}
-          stroke="#111827"
-          strokeWidth="1.5"
-        />
-        <line
-          x1={x0 + drawOuter + 34}
-          y1={y0}
-          x2={x0 + drawOuter + 46}
-          y2={y0}
-          stroke="#111827"
-          strokeWidth="1.5"
-        />
-        <line
-          x1={x0 + drawOuter + 34}
-          y1={y1}
-          x2={x0 + drawOuter + 46}
-          y2={y1}
-          stroke="#111827"
-          strokeWidth="1.5"
-        />
-        <text
-          x={x0 + drawOuter + 58}
-          y={(y0 + y1) / 2}
-          transform={`rotate(90 ${x0 + drawOuter + 58} ${(y0 + y1) / 2})`}
-          textAnchor="middle"
-          fontSize="14"
           fill="#111827"
         >
-          Panel Height = {fixedSize || "-"}
+          Side Piece 1
         </text>
 
-        {/* summary */}
-        <text x="40" y="360" fontSize="13" fill="#374151">
-          Turning size = {turningSize || "-"} · Fixed side = {fixedSize || "-"}
+        <text
+          x={sectorBoxX1 - 40}
+          y={sectorBoxY1 + 10}
+          fontSize="13"
+          fill="#B91C1C"
+        >
+          Outer R = {(r + turningSize) || "-"}
         </text>
-        <text x="40" y="380" fontSize="13" fill="#374151">
-          This is an approximate fabrication layout for elbow panels, without seam/flange allowances.
+
+        <text
+          x={sectorBoxX1  - 30}
+          y={sectorBoxY1 + outerR - 20}
+          fontSize="13"
+          fill="#B91C1C"
+        >
+          Inner R = {r || "-"}
+        </text>
+
+        <text
+          x={sectorBoxX1  + 60}
+          y={sectorBoxY1 + outerR - 10}
+          fontSize="13"
+          fill="#111827"
+        >
+          {a}°
+        </text>
+
+        <text
+          x={sectorBoxX1 + innerR + 70}
+          y={sectorBoxY1 + outerR + 35}
+          fontSize="13"
+          fill="#111827"
+        >
+          Turning Size = {turningSize || "-"}
+        </text>
+
+        {/* ===== Curved piece 2 ===== */}
+        <g transform={`translate(${sectorBoxX2 + 60}, ${sectorBoxY2 + outerR})`}>
+          <path
+            d={sectorPath}
+            fill="#F3F4F6"
+            stroke="#111827"
+            strokeWidth="2"
+          />
+        </g>
+
+        <text
+          x={sectorBoxX2 }
+          y={sectorBoxY2 + outerR + 30}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="600"
+          fill="#111827"
+        >
+          Side Piece 2
+        </text>
+
+        <text
+          x={sectorBoxX2 - 50}
+          y={sectorBoxY2 + 10}
+          fontSize="13"
+          fill="#B91C1C"
+        >
+          Outer R = {(r + turningSize) || "-"}
+        </text>
+
+        <text
+          x={sectorBoxX2 - 30}
+          y={sectorBoxY2 + outerR - 20 }
+          fontSize="13"
+          fill="#B91C1C"
+        >
+          Inner R = {r || "-"}
+        </text>
+
+        <text
+          x={sectorBoxX2 + 60}
+          y={sectorBoxY2 + outerR - 10}
+          fontSize="13"
+          fill="#111827"
+        >
+          {a}°
+        </text>
+
+        <text
+          x={sectorBoxX2 + innerR + 70}
+          y={sectorBoxY2 + outerR + 35}
+          fontSize="13"
+          fill="#111827"
+        >
+          Turning Size = {turningSize || "-"}
+        </text>
+
+        {/* ===== Inner rectangle ===== */}
+        <rect
+          x={rectX + 20}
+          y={innerRectY}
+          width={innerRectW}
+          height={rectH}
+          fill="#F9FAFB"
+          stroke="#111827"
+          strokeWidth="2"
+        />
+
+        <text
+          x={rectX + innerRectW / 2 + 20}
+          y={innerRectY - 10}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="600"
+          fill="#111827"
+        >
+          Inner Side
+        </text>
+
+        <text
+          x={rectX + innerRectW / 2 + 20}
+          y={innerRectY + rectH / 2}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="700"
+          fill="#B91C1C"
+        >
+          {innerArc ? innerArc.toFixed(2) : "-"} × {fixedSide || "-"}
+        </text>
+
+        {/* ===== Outer rectangle ===== */}
+        <rect
+          x={rectX}
+          y={outerRectY}
+          width={outerRectW}
+          height={rectH}
+          fill="#F3F4F6"
+          stroke="#111827"
+          strokeWidth="2"
+        />
+
+        <text
+          x={rectX + outerRectW / 2}
+          y={outerRectY - 10}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="600"
+          fill="#111827"
+        >
+          Outer Side
+        </text>
+
+        <text
+          x={rectX + outerRectW / 2}
+          y={outerRectY + rectH / 2}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="700"
+          fill="#B91C1C"
+        >
+          {outerArc ? outerArc.toFixed(2) : "-"} × {fixedSide || "-"}
+        </text>
+
+        {/* Summary */}
+        <text x="30" y="380" fontSize="13" fill="#374151">
+          Inner Arc = {innerArc ? innerArc.toFixed(2) : "-"}
+        </text>
+        <text x="30" y="398" fontSize="13" fill="#374151">
+          Outer Arc = {outerArc ? outerArc.toFixed(2) : "-"}
+        </text>
+        <text x="30" y="416" fontSize="13" fill="#374151">
+          Fixed Side = {fixedSide || "-"}
         </text>
       </svg>
     </div>
