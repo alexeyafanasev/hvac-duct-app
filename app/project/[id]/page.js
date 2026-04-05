@@ -519,6 +519,8 @@ export default function ProjectPage() {
     const handleExportPDF = async () => {
     if (!project) return;
 
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    
     const docPdf = new jsPDF();
     let currentY = 20;
 
@@ -1330,13 +1332,16 @@ export default function ProjectPage() {
       <div
         ref={exportDrawingsRef}
         style={{
-            position: "absolute",
-            left: "-99999px",
+            position: "fixed",
             top: 0,
+            left: 0,
             width: "900px",
             background: "#ffffff",
             padding: "20px",
-        }}
+            opacity: 0,
+            pointerEvents: "none",
+            zIndex: -1,
+            }}
         >
         {items.map((item, index) => (
             <div
