@@ -9,6 +9,7 @@ import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import {
   OffsetDrawing,
   ElbowDrawing,
+  TransitionDrawing,
 } from "../../../components/FittingDrawings";
 
 export default function ProjectPage() {
@@ -49,6 +50,7 @@ export default function ProjectPage() {
     length: "",
     quantity: "1",
     insulated: false,
+    justification: "center",
   });
 
   const [offsetForm, setOffsetForm] = useState({
@@ -148,6 +150,7 @@ export default function ProjectPage() {
         length: item.length || "",
         quantity: item.quantity || "1",
         insulated: item.insulated || false,
+        justification: item.justification || "center",
       });
     }
 
@@ -196,6 +199,18 @@ export default function ProjectPage() {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const getTransitionLabel = (value) => {
+    const labels = {
+      center: "Center",
+      "along-width": "Along Width",
+      "along-height": "Along Height",
+      "left-angle": "Left Angle",
+      "right-angle": "Right Angle",
+    };
+
+    return labels[value] || value;
   };
 
   const handleAddStraight = async () => {
@@ -296,6 +311,7 @@ export default function ProjectPage() {
       length: transitionForm.length,
       quantity: transitionForm.quantity,
       insulated: transitionForm.insulated,
+      justification: transitionForm.justification,
     };
 
     if (editingIndex !== null) {
@@ -314,6 +330,7 @@ export default function ProjectPage() {
       length: "",
       quantity: "1",
       insulated: false,
+      justification: "center",
     });
   };
 
@@ -360,7 +377,9 @@ export default function ProjectPage() {
 
   const renderItemLabel = (item) => {
     if (item.type === "Straight") {
-      return `Straight ${item.width}x${item.height} L${item.length} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
+      return `Straight ${item.width}x${item.height} L${item.length} Qty ${item.quantity}${
+        item.insulated ? " INS" : ""
+      }`;
     }
 
     if (item.type === "Elbow") {
@@ -370,11 +389,15 @@ export default function ProjectPage() {
     }
 
     if (item.type === "Transition") {
-      return `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2} L${item.length} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
+      return `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2} L${item.length} ${getTransitionLabel(
+        item.justification || "center"
+      )} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
     }
 
     if (item.type === "Offset") {
-      return `Offset ${item.width}x${item.height} O${item.offset} L${item.length} ${item.direction} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
+      return `Offset ${item.width}x${item.height} O${item.offset} L${item.length} ${item.direction} Qty ${item.quantity}${
+        item.insulated ? " INS" : ""
+      }`;
     }
 
     return item.type;
@@ -424,7 +447,9 @@ export default function ProjectPage() {
       if (item.type === "Transition") {
         return [
           index + 1,
-          `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2}`,
+          `Transition ${getTransitionLabel(
+            item.justification || "center"
+          )} ${item.width1}x${item.height1} -> ${item.width2}x${item.height2}`,
           "-",
           "-",
           item.length,
@@ -506,7 +531,10 @@ export default function ProjectPage() {
       });
     }
 
-    const mailtoLink = `mailto:${shopEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const mailtoLink = `mailto:${shopEmail}?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
+
     window.location.href = mailtoLink;
   };
 
@@ -674,7 +702,9 @@ export default function ProjectPage() {
               <input
                 type="number"
                 value={straightForm.quantity}
-                onChange={(e) => handleStraightChange("quantity", e.target.value)}
+                onChange={(e) =>
+                  handleStraightChange("quantity", e.target.value)
+                }
                 className="w-full border rounded-xl p-3"
                 placeholder="1"
               />
@@ -720,11 +750,11 @@ export default function ProjectPage() {
 
           <div className="mb-6 rounded-xl border p-4 bg-gray-50">
             <ElbowDrawing
-                bendType={elbowForm.bendType}
-                width={elbowForm.width}
-                height={elbowForm.height}
-                radius={elbowForm.radius}
-                angle={elbowForm.angle}
+              bendType={elbowForm.bendType}
+              width={elbowForm.width}
+              height={elbowForm.height}
+              radius={elbowForm.radius}
+              angle={elbowForm.angle}
             />
           </div>
 
@@ -852,6 +882,17 @@ export default function ProjectPage() {
         <>
           <h2 className="text-2xl font-semibold mb-4">Rectangular Transition</h2>
 
+          <div className="mb-6 rounded-xl border p-4 bg-gray-50">
+            <TransitionDrawing
+              justification={transitionForm.justification}
+              width1={transitionForm.width1}
+              height1={transitionForm.height1}
+              width2={transitionForm.width2}
+              height2={transitionForm.height2}
+              length={transitionForm.length}
+            />
+          </div>
+
           <div className="space-y-4 mb-6">
             <div>
               <label className="block mb-1 font-medium">Width 1</label>
@@ -919,6 +960,41 @@ export default function ProjectPage() {
             </div>
 
             <div>
+            <label className="block mb-2 font-medium">Transition Type</label>
+
+            <div className="grid grid-cols-3 gap-2">
+                {[
+                { value: "top-left", label: "↖" },
+                { value: "top", label: "↑" },
+                { value: "top-right", label: "↗" },
+
+                { value: "left", label: "←" },
+                { value: "center", label: "•" },
+                { value: "right", label: "→" },
+
+                { value: "bottom-left", label: "↙" },
+                { value: "bottom", label: "↓" },
+                { value: "bottom-right", label: "↘" },
+                ].map((option) => (
+                <button
+                    key={option.value}
+                    type="button"
+                    onClick={() =>
+                    handleTransitionChange("justification", option.value)
+                    }
+                    className={`h-14 rounded-xl border text-lg flex items-center justify-center ${
+                    transitionForm.justification === option.value
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-gray-300"
+                    }`}
+                >
+                    {option.label}
+                </button>
+                ))}
+            </div>
+            </div>
+
+            <div>
               <label className="block mb-1 font-medium">Quantity</label>
               <input
                 type="number"
@@ -971,11 +1047,11 @@ export default function ProjectPage() {
 
           <div className="mb-6 rounded-xl border p-4 bg-gray-50">
             <OffsetDrawing
-                direction={offsetForm.direction}
-                width={offsetForm.width}
-                height={offsetForm.height}
-                length={offsetForm.length}
-                offset={offsetForm.offset}
+              direction={offsetForm.direction}
+              width={offsetForm.width}
+              height={offsetForm.height}
+              length={offsetForm.length}
+              offset={offsetForm.offset}
             />
           </div>
 

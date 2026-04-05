@@ -15,7 +15,7 @@ export function OffsetDrawing({
         Q130 55 143 50
         L200 50
         Q185 70 115 68
-        Q80 65 64 70
+        Q80 67 64 70
         Z
       `,
       leftFace: `
@@ -28,10 +28,10 @@ export function OffsetDrawing({
       centerFace: `
         M200 50
         Q185 70 115 68
-        Q80 65 64 70
+        Q80 67 64 70
         L64 70
         L64 112
-        Q65 100 140 105
+        Q70 104 140 103
         Q180 105 200 82
         Z
       `,
@@ -82,8 +82,8 @@ export function OffsetDrawing({
         Q40 68 21 50
         L21 50
         L21 80
-        Q40 100 90 99
-        Q148 100 155 112
+        Q40 100 90 100
+        Q150 103 155 112
         Z
       `,
       offsetLines: `
@@ -112,96 +112,101 @@ export function OffsetDrawing({
     up: {
       title: "Offset Up",
       top: `
-        M26 82
-        L82 82
-        L110 42
-        L166 42
-        L188 54
-        L132 54
-        L104 94
-        L48 94
+        M115 40
+        Q130 36 150 87
+        Q158 116 178 110
+        L115 113
+        Q103 110 101 90
+        Q95 45 71 40
         Z
       `,
       leftFace: `
-        M26 82
-        L48 94
-        L48 126
-        L26 114
+        M178 110
+        L115 113
+        L115 152
+        L178 149
         Z
       `,
       centerFace: `
-        M82 82
-        L104 94
-        L104 126
-        L82 114
+        M115 113
+        Q103 110 101 90
+        Q95 45 71 40
+        L71 40
+        L71 60
+        Q76 58 80 80
+        Q80 129 115 152
         Z
       `,
-      rightFace: `
-        M166 42
-        L188 54
-        L188 86
-        L166 74
+      offsetLines: `
+        M31 20
+        L71 60
+        Z
+        M31 70
+        L115 152
         Z
       `,
-      connectorFace: `
-        M110 42
-        L132 54
-        L132 86
-        L110 74
+      lengthLines: `
+        M178 110
+        L213 108
+        Z
+        M115 40
+        L190 35
         Z
       `,
-      wPos: { x: 148, y: 36 },
-      hPos: { x: 8, y: 106 },
-      lPos: { x: 78, y: 144 },
-      oPos: { x: 92, y: 22 },
+      wPos: { x: 140, y: 146 },
+      hPos: { x: 180, y: 136 },
+      lPos: { x: 178, y: 74 },
+      oPos: { x: 32, y: 55 },
       dirPos: { x: 18, y: 150 },
     },
 
     down: {
       title: "Offset Down",
-      top: `
-        M28 42
-        L84 42
-        L112 82
-        L168 82
-        L190 94
-        L134 94
-        L106 54
-        L50 54
+      centerFace: `
+        M125 40
+        Q90 45 68 108
+        Q60 125 50 125
+        L50 145
+        Q70 149 100 100
+        Q109 89 125 90
         Z
       `,
       leftFace: `
-        M28 42
-        L50 54
-        L50 86
-        L28 74
+        M188 41
+        L125 40
+        L125 90
+        L188 89
         Z
       `,
-      centerFace: `
-        M84 42
-        L106 54
-        L106 86
-        L84 74
+      top: `
+        M50 145
+        Q70 149 100 100
+        Q109 89 125 90
+        L188 89
+        Q130 95 110 135
+        Q105 145 95 145
         Z
       `,
-      rightFace: `
-        M168 82
-        L190 94
-        L190 126
-        L168 114
+      offsetLines: `
+        M125 40
+        L30 70
+        Z
+        M50 125
+        L30 132
         Z
       `,
-      connectorFace: `
-        M112 82
-        L134 94
-        L134 126
-        L112 114
+      lengthLines: `
+        M188 89
+        L208 89
+        Z
+        M100 145
+        L208 145
         Z
       `,
-      wPos: { x: 148, y: 76 },
-      hPos: { x: 8, y: 66 },
-      lPos: { x: 78, y: 144 },
-      oPos: { x: 94, y: 24 },
+      wPos: { x: 148, y: 36 },
+      hPos: { x: 190, y: 70 },
+      lPos: { x: 190, y: 124 },
+      oPos: { x: 34, y: 104 },
       dirPos: { x: 18, y: 150 },
     },
   };
@@ -527,6 +532,231 @@ export function ElbowDrawing({
 
         <text x="16" y="150" fontSize="12" fill="#374151">
           {isShort ? "SW" : "LW"}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+export function TransitionDrawing({
+  justification = "center",
+  width1 = "",
+  height1 = "",
+  width2 = "",
+  height2 = "",
+  length = "",
+  className = "w-full max-w-sm",
+}) {
+  const variants = {
+    center: {
+      title: "Transition - Center",
+      top: "M90 60 L140 60 L180 30 L50 30 Z",
+      leftFace: "M90 60 L90 110 L50 140 L50 30  Z",
+      centerFace: "M140 60 L140 110 L90 110 L90 60 Z",
+      rightFace: "M140 60 L140 110 L180 140 L180 30 Z",
+      connectorFace: "M90 110 L140 110 L180 140 L50 140 Z",
+      inPos: { x: 20, y: 157 },
+      outPos: { x: 132, y: 157 },
+      lPos: { x: 10, y: 86 },
+    },
+
+    left: {
+      title: "Transition - Left",
+      top: "M50 60 L100 60 L180 30 L50 30 Z",
+      centerFace: "M100 60 L100 110 L50 110 L50 60 Z",
+      rightFace: "M100 60 L100 110 L180 140 L180 30 Z",
+      connectorFace: "M50 110 L100 110 L180 140 L50 140 Z",
+      inPos: { x: 20, y: 157 },
+      outPos: { x: 132, y: 157 },
+      lPos: { x: 10, y: 86 },
+    },
+
+    "top-left": {
+      title: "Transition - Top Left",
+      centerFace: "M100 30 L100 80 L50 80 L50 30 Z",
+      rightFace: "M100 30 L100 80 L180 140 L180 30 Z",
+      connectorFace: "M50 80 L100 80 L180 140 L50 140 Z",
+      inPos: { x: 20, y: 157 },
+      outPos: { x: 132, y: 157 },
+      lPos: { x: 10, y: 86 },
+    },
+
+    top: {
+      title: "Transition - Top",
+      leftFace: "M90 30 L90 80 L50 140 L50 30  Z",
+      centerFace: "M140 30 L140 80 L90 80 L90 30 Z",
+      rightFace: "M140 30 L140 80 L180 140 L180 30 Z",
+      connectorFace: "M90 80 L140 80 L180 140 L50 140 Z",
+      inPos: { x: 20, y: 157 },
+      outPos: { x: 132, y: 157 },
+      lPos: { x: 10, y: 86 },
+    },
+
+    "top-right": {
+      title: "Transition - Top Right",
+      leftFace: "M130 30 L130 80 L50 140 L50 30  Z",
+      centerFace: "M180 30 L180 80 L130 80 L130 30 Z",
+      connectorFace: "M130 80 L180 80 L180 140 L50 140 Z",
+      inPos: { x: 20, y: 157 },
+      outPos: { x: 132, y: 157 },
+      lPos: { x: 10, y: 86 },
+    },
+
+    right: {
+      title: "Transition - Right",
+      top: "M130 60 L180 60 L180 30 L50 30 Z",
+      leftFace: "M130 60 L130 110 L50 140 L50 30  Z",
+      centerFace: "M180 60 L180 110 L130 110 L130 60 Z",
+      connectorFace: "M130 110 L180 110 L180 140 L50 140 Z",
+      inPos: { x: 20, y: 157 },
+      outPos: { x: 132, y: 157 },
+      lPos: { x: 10, y: 86 },
+    },
+
+    "bottom-right": {
+      title: "Transition - Bottom Right",
+      top: "M130 90 L180 90 L180 30 L50 30 Z",
+      leftFace: "M130 90 L130 140 L50 140 L50 30  Z",
+      centerFace: "M180 90 L180 140 L130 140 L130 90 Z",
+      inPos: { x: 20, y: 157 },
+      outPos: { x: 132, y: 157 },
+      lPos: { x: 10, y: 86 },
+    },
+
+    bottom: {
+      title: "Transition - Bottom",
+      top: "M90 90 L140 90 L180 30 L50 30 Z",
+      leftFace: "M90 90 L90 140 L50 140 L50 30  Z",
+      centerFace: "M140 90 L140 140 L90 140 L90 90 Z",
+      rightFace: "M140 90 L140 140 L180 140 L180 30 Z",
+      inPos: { x: 20, y: 157 },
+      outPos: { x: 132, y: 157 },
+      lPos: { x: 10, y: 86 },
+    },
+
+    "bottom-left": {
+      title: "Transition - Bottom Left",
+      top: "M50 90 L50 140 L180 30 L50 30 Z",
+      centerFace: "M100 90 L100 140 L50 140 L50 90 Z",
+      rightFace: "M100 90 L100 140 L180 140 L180 30 Z",
+      inPos: { x: 20, y: 157 },
+      outPos: { x: 132, y: 157 },
+      lPos: { x: 10, y: 86 },
+    },
+  };
+
+  const d = variants[justification] || variants.center;
+
+  return (
+    <div className={className}>
+      <svg viewBox="0 0 220 160" className="w-full h-auto">
+        <defs>
+          <linearGradient
+            id={`tr-front-${justification}`}
+            x1="0"
+            y1="0"
+            x2="1"
+            y2="1"
+          >
+            <stop offset="0%" stopColor="#d9dde7" />
+            <stop offset="100%" stopColor="#bcc4d3" />
+          </linearGradient>
+
+          <linearGradient
+            id={`tr-side-${justification}`}
+            x1="0"
+            y1="0"
+            x2="1"
+            y2="1"
+          >
+            <stop offset="0%" stopColor="#8790a4" />
+            <stop offset="100%" stopColor="#5e6679" />
+          </linearGradient>
+
+          <linearGradient
+            id={`tr-top-${justification}`}
+            x1="0"
+            y1="0"
+            x2="1"
+            y2="1"
+          >
+            <stop offset="0%" stopColor="#c8cfdd" />
+            <stop offset="100%" stopColor="#9ea8ba" />
+          </linearGradient>
+        </defs>
+
+        <text x="18" y="18" fontSize="12" fill="#374151">
+          {d.title}
+        </text>
+
+        <path
+          d={d.top}
+          fill={`url(#tr-top-${justification})`}
+          stroke="#374151"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+
+        <path
+          d={d.leftFace}
+          fill={`url(#tr-side-${justification})`}
+          stroke="#374151"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+
+        <path
+          d={d.centerFace}
+          fill={`url(#tr-front-${justification})`}
+          stroke="#374151"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+
+        <path
+          d={d.rightFace}
+          fill={`url(#tr-side-${justification})`}
+          stroke="#374151"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+
+        <path
+          d={d.connectorFace}
+          fill={`url(#tr-front-${justification})`}
+          stroke="#374151"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+
+        <text
+          x={d.inPos.x}
+          y={d.inPos.y}
+          fontSize="12"
+          fontWeight="700"
+          fill="#b91c1c"
+        >
+          IN {width1 || "-"}x{height1 || "-"}
+        </text>
+
+        <text
+          x={d.outPos.x}
+          y={d.outPos.y}
+          fontSize="12"
+          fontWeight="700"
+          fill="#b91c1c"
+        >
+          OUT {width2 || "-"}x{height2 || "-"}
+        </text>
+
+        <text
+          x={d.lPos.x}
+          y={d.lPos.y}
+          fontSize="14"
+          fontWeight="600"
+          fill="#374151"
+        >
+          L={length || "-"}
         </text>
       </svg>
     </div>
