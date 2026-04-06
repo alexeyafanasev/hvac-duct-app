@@ -137,7 +137,7 @@ return (
               placeholder="Enter project name"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              className="w-full border p-3 rounded-lg"
+              className="w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 p-3 rounded-lg"
             />
           </div>
 
@@ -150,7 +150,7 @@ return (
               type="date"
               value={projectDate}
               onChange={(e) => setProjectDate(e.target.value)}
-              className="w-full border p-3 rounded-lg"
+              className="w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 p-3 rounded-lg"
             />
           </div>
 
@@ -163,7 +163,7 @@ return (
               placeholder="Notes for shop"
               value={projectNotes}
               onChange={(e) => setProjectNotes(e.target.value)}
-              className="w-full border p-3 rounded-lg min-h-[90px]"
+              className="w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 p-3 rounded-lg"
             />
           </div>
 

@@ -724,7 +724,7 @@ export default function ProjectPage() {
       </h1>
 
         {project && (
-        <div className="mb-6 rounded-xl border p-4 bg-gray-50 space-y-3">
+        <div className="mb-6 rounded-xl border border-gray-300 bg-white p-4 space-y-3 text-gray-900">
             <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-900">Status:</span>
@@ -761,7 +761,7 @@ export default function ProjectPage() {
             </div>
             </div>
 
-            <p className="text-sm text-gray-800">
+            <p className="text-sm text-gray-900">
             <span className="font-medium text-gray-900">Date:</span>{" "}
             {project?.date || "-"}
             </p>
@@ -801,7 +801,7 @@ export default function ProjectPage() {
             </div>
 
             {!isEditingNotes ? (
-                <p className="text-sm text-gray-800 whitespace-pre-line">
+                <p className="text-sm text-gray-900 whitespace-pre-line">
                 {project?.notes || "-"}
                 </p>
             ) : (
