@@ -82,7 +82,7 @@ return (
 
     <button
       onClick={() => setShowModal(true)}
-      className="w-full bg-blue-600 text-white py-3 rounded-xl mb-6 text-lg"
+      className="w-full bg-blue-900 text-white py-3 rounded-xl mb-6 text-lg"
     >
       + New Project
     </button>
@@ -96,11 +96,11 @@ return (
             <div className="border rounded-xl p-4 shadow-sm hover:bg-gray-50 cursor-pointer">
               <h2 className="text-xl font-semibold">{project.name}</h2>
 
-              <p className="text-gray-800 text-sm">
+              <p className="text-gray-500 text-sm">
                 Date: {project?.date || "-"}
               </p>
 
-              <p className="text-gray-800">
+              <p className="text-gray-500">
                 Items: {project.items ? project.items.length : 0}
               </p>
 
@@ -125,11 +125,11 @@ return (
     {showModal && (
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
         <div className="bg-white p-6 rounded-xl w-full max-w-md">
-          <h2 className="text-xl font-semibold mb-4">New Project</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-900">New Project</h2>
 
           {/* Project Name */}
           <div className="mb-3">
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-medium mb-1 text-gray-900">
               Project Name
             </label>
             <input
@@ -143,7 +143,7 @@ return (
 
           {/* Date */}
           <div className="mb-3">
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-medium mb-1 text-gray-900">
               Date
             </label>
             <input
@@ -156,7 +156,7 @@ return (
 
           {/* Notes */}
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-medium mb-1 text-gray-900">
               Notes
             </label>
             <textarea
