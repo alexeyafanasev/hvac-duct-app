@@ -761,7 +761,7 @@ export default function ProjectPage() {
             </div>
             </div>
 
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-800">
             <span className="font-medium text-gray-900">Date:</span>{" "}
             {project?.date || "-"}
             </p>
@@ -792,7 +792,7 @@ export default function ProjectPage() {
                         setIsEditingNotes(false);
                         setNotesValue(project.notes || "");
                     }}
-                    className="text-sm text-gray-500 hover:underline"
+                    className="text-sm text-gray-800 hover:underline"
                     >
                     Cancel
                     </button>
@@ -801,7 +801,7 @@ export default function ProjectPage() {
             </div>
 
             {!isEditingNotes ? (
-                <p className="text-sm text-gray-700 whitespace-pre-line">
+                <p className="text-sm text-gray-800 whitespace-pre-line">
                 {project?.notes || "-"}
                 </p>
             ) : (
@@ -843,7 +843,7 @@ export default function ProjectPage() {
           </div>
 
           {items.length === 0 ? (
-            <p className="text-gray-500">No fittings yet</p>
+            <p className="text-gray-800">No fittings yet</p>
           ) : (
             <div className="space-y-3">
               {items.map((item, index) => (
@@ -874,7 +874,7 @@ export default function ProjectPage() {
                             activeDrawingIndex === index ? null : index
                             )
                         }
-                        className="border border-gray-400 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-100"
+                        className="border border-gray-800 text-gray-800 px-3 py-1 rounded-lg hover:bg-gray-100"
                         >
                         Drawing
                         </button>

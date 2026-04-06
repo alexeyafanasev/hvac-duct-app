@@ -88,7 +88,7 @@ return (
     </button>
 
     {projects.length === 0 ? (
-      <p className="text-gray-500">No projects yet</p>
+      <p className="text-gray-800">No projects yet</p>
     ) : (
       <div className="space-y-3">
         {projects.map((project) => (
@@ -96,11 +96,11 @@ return (
             <div className="border rounded-xl p-4 shadow-sm hover:bg-gray-50 cursor-pointer">
               <h2 className="text-xl font-semibold">{project.name}</h2>
 
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-800 text-sm">
                 Date: {project?.date || "-"}
               </p>
 
-              <p className="text-gray-500">
+              <p className="text-gray-800">
                 Items: {project.items ? project.items.length : 0}
               </p>
 
