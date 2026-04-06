@@ -26,6 +26,15 @@ export default function ProjectPage() {
   const [selectedFitting, setSelectedFitting] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [activeDrawingIndex, setActiveDrawingIndex] = useState(null);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState("");
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  useEffect(() => {
+    if (project) {
+      setNotesValue(project.notes || "");
+    }
+  }, [project]);
 
   const exportDrawingsRef = useRef(null);
 
@@ -173,6 +182,59 @@ export default function ProjectPage() {
       });
     }
   };
+  const getStatusClasses = (status) => {
+    if (status === "Completed") {
+        return "bg-green-100 text-green-700 border-green-200";
+    }
+
+    if (status === "In Progress") {
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+    }
+
+    return "bg-blue-100 text-blue-700 border-blue-200";
+    };
+
+  const handleUpdateStatus = async (newStatus) => {
+    if (!project) return;
+
+    try {
+        await updateDoc(doc(db, "projects", project.id), {
+        status: newStatus,
+        });
+
+        setProject((prev) => ({
+        ...prev,
+        status: newStatus,
+        }));
+    } catch (error) {
+        console.error("Error updating status:", error);
+        alert("Failed to update project status");
+    }
+    };
+
+  const handleSaveNotes = async () => {
+    if (!project) return;
+
+    setIsSavingNotes(true);
+
+    try {
+        await updateDoc(doc(db, "projects", project.id), {
+        notes: notesValue.trim(),
+        });
+
+        setProject((prev) => ({
+        ...prev,
+        notes: notesValue.trim(),
+        }));
+
+        setIsEditingNotes(false);
+    } catch (error) {
+        console.error("Error updating notes:", error);
+        alert("Failed to save notes");
+    } finally {
+        setIsSavingNotes(false);
+    }
+    };
 
   const handleSelectFitting = (type) => {
     setEditingIndex(null);
@@ -532,6 +594,12 @@ export default function ProjectPage() {
     docPdf.text(`Project: ${project.name}`, 14, currentY);
 
     currentY += 8;
+    docPdf.text(`Date: ${project.date || "-"}`, 14, currentY);
+
+    currentY += 8;
+    docPdf.text(`Notes: ${project?.notes || "-"}`, 14, currentY);
+
+    currentY += 8;
     docPdf.text(`Total items: ${items.length}`, 14, currentY);
 
     currentY += 12;
@@ -615,7 +683,9 @@ export default function ProjectPage() {
         const subject = `HVAC Duct Order - ${project.name}`;
 
         let body = `Project: ${project.name}\n`;
+        body += `Date: ${project?.date || "-"}\n`;
         body += `Total items: ${items.length}\n\n`;
+        body += `Notes: ${project?.notes || "-"}\n`;
         body += `Items:\n\n`;
 
         if (items.length === 0) {
@@ -652,6 +722,100 @@ export default function ProjectPage() {
       <h1 className="text-3xl font-bold mb-6">
         {project ? project.name : "Project not found"}
       </h1>
+
+        {project && (
+        <div className="mb-6 rounded-xl border p-4 bg-gray-50 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-900">Status:</span>
+                <span
+                className={`text-sm px-3 py-1 rounded-full border ${getStatusClasses(
+                    project?.status || "Active"
+                )}`}
+                >
+                {project?.status || "Active"}
+                </span>
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+                <button
+                onClick={() => handleUpdateStatus("Active")}
+                className="text-sm border px-3 py-1 rounded-lg hover:bg-white"
+                >
+                Mark Active
+                </button>
+
+                <button
+                onClick={() => handleUpdateStatus("In Progress")}
+                className="text-sm border px-3 py-1 rounded-lg hover:bg-white"
+                >
+                In Progress
+                </button>
+
+                <button
+                onClick={() => handleUpdateStatus("Completed")}
+                className="text-sm border px-3 py-1 rounded-lg hover:bg-white"
+                >
+                Mark as Done
+                </button>
+            </div>
+            </div>
+
+            <p className="text-sm text-gray-600">
+            <span className="font-medium text-gray-900">Date:</span>{" "}
+            {project?.date || "-"}
+            </p>
+
+            <div>
+            <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium text-gray-900">Notes</span>
+
+                {!isEditingNotes ? (
+                <button
+                    onClick={() => setIsEditingNotes(true)}
+                    className="text-sm text-blue-600 hover:underline"
+                >
+                    Edit
+                </button>
+                ) : (
+                <div className="flex gap-2">
+                    <button
+                    onClick={handleSaveNotes}
+                    disabled={isSavingNotes}
+                    className="text-sm text-green-600 hover:underline"
+                    >
+                    {isSavingNotes ? "Saving..." : "Save"}
+                    </button>
+
+                    <button
+                    onClick={() => {
+                        setIsEditingNotes(false);
+                        setNotesValue(project.notes || "");
+                    }}
+                    className="text-sm text-gray-500 hover:underline"
+                    >
+                    Cancel
+                    </button>
+                </div>
+                )}
+            </div>
+
+            {!isEditingNotes ? (
+                <p className="text-sm text-gray-700 whitespace-pre-line">
+                {project?.notes || "-"}
+                </p>
+            ) : (
+                <textarea
+                value={notesValue}
+                onChange={(e) => setNotesValue(e.target.value)}
+                className="w-full border rounded-lg p-2 text-sm min-h-[80px]"
+                />
+            )}
+            </div>
+        </div>
+        )}
+      
+
 
       {!showFittingSelector && !selectedFitting && (
         <>
