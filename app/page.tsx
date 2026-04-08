@@ -179,7 +179,7 @@ return (
             <button
               onClick={() => setShowModal(false)}
               disabled={isCreating}
-              className="flex-1 border px-4 py-2 rounded-lg disabled:opacity-50"
+              className="flex-1 border px-4 py-2 rounded-lg disabled:opacity-50 border-gray-300 bg-white text-gray-900"
             >
               Cancel
             </button>

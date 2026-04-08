@@ -1,3 +1,82 @@
+export function StraightDrawing({
+  width = "",
+  height = "",
+  length = "",
+  className = "w-full max-w-sm",
+}) {
+  return (
+    <div className={className}>
+      <svg viewBox="0 0 220 160" className="w-full h-auto">
+        <defs>
+          <linearGradient id="straight-front" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#d9dde7" />
+            <stop offset="100%" stopColor="#bfc6d6" />
+          </linearGradient>
+
+          <linearGradient id="straight-side" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#8b93a7" />
+            <stop offset="100%" stopColor="#5f677b" />
+          </linearGradient>
+
+          <linearGradient id="straight-top" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#c7ccda" />
+            <stop offset="100%" stopColor="#9ea6ba" />
+          </linearGradient>
+        </defs>
+
+        <text x="18" y="18" fontSize="12" fill="#374151">
+          Straight Duct
+        </text>
+
+        {/* top */}
+        <path
+          d="M40 50 L150 50 L180 30 L70 30 Z"
+          fill="url(#straight-top)"
+          stroke="#374151"
+          strokeWidth="1.5"
+        />
+
+        {/* left side */}
+        <path
+          d="M40 50 L70 30 L70 110 L40 130 Z"
+          fill="url(#straight-side)"
+          stroke="#374151"
+          strokeWidth="1.5"
+        />
+
+        {/* front */}
+        <path
+          d="M40 50 L150 50 L150 130 L40 130 Z"
+          fill="url(#straight-front)"
+          stroke="#374151"
+          strokeWidth="1.5"
+        />
+
+        {/* right side */}
+        <path
+          d="M150 50 L180 30 L180 110 L150 130 Z"
+          fill="url(#straight-side)"
+          stroke="#374151"
+          strokeWidth="1.5"
+        />
+
+        {/* labels */}
+        <text x="95" y="145" fontSize="14" fontWeight="700" fill="#b91c1c">
+          {width || "-"}
+        </text>
+
+        <text x="185" y="95" fontSize="14" fontWeight="700" fill="#b91c1c">
+          {height || "-"}
+        </text>
+
+        <text x="100" y="75" fontSize="14" fontWeight="600" fill="#374151">
+          {length || "-"}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 export function OffsetDrawing({
   direction = "right",
   width = "",

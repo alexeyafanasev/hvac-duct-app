@@ -268,7 +268,7 @@ export function ElbowFlatPattern({
   const turningSize = bendType === "long" ? h : w;
   const fixedSide = bendType === "long" ? w : h;
 
-  const innerArc = angleRad * r;
+  const innerArc = 2 * r;
   const outerArc = angleRad * (r + turningSize);
 
   // ===== Drawing scale =====
@@ -316,6 +316,8 @@ export function ElbowFlatPattern({
       M ${outerStart.x} ${outerStart.y}
       A ${rOuter} ${rOuter} 0 ${largeArcFlag} 1 ${outerEnd.x} ${outerEnd.y}
       L ${innerEnd.x} ${innerEnd.y}
+      L ${innerEnd.x} ${innerEnd.y-rInner}
+      L ${innerEnd.x-rInner} ${innerEnd.y-rInner}
       A ${rInner} ${rInner} 0 ${largeArcFlag} 0 ${innerStart.x} ${innerStart.y}
       Z
     `;
@@ -350,7 +352,7 @@ export function ElbowFlatPattern({
         </text>
 
         {/* ===== Curved piece 1 ===== */}
-        <g transform={`translate(${sectorBoxX1 + 60}, ${sectorBoxY1 + outerR})`}>
+        <g transform={`translate(${sectorBoxX1 + 80}, ${sectorBoxY1 + outerR})`}>
           <path
             d={sectorPath}
             fill="#F9FAFB"
@@ -493,7 +495,7 @@ export function ElbowFlatPattern({
           fontWeight="700"
           fill="#B91C1C"
         >
-          {innerArc ? innerArc.toFixed(2) : "-"} × {fixedSide || "-"}
+          {innerArc ? innerArc.toFixed(2) : "-"} × {h || "-"}
         </text>
 
         {/* ===== Outer rectangle ===== */}
@@ -526,7 +528,7 @@ export function ElbowFlatPattern({
           fontWeight="700"
           fill="#B91C1C"
         >
-          {outerArc ? outerArc.toFixed(2) : "-"} × {fixedSide || "-"}
+          {outerArc ? outerArc.toFixed(2) : "-"} × {h || "-"}
         </text>
 
         {/* Summary */}

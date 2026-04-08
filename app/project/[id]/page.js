@@ -1,83 +1,50 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import { db } from "../../../lib/firebase";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import {
-  OffsetDrawing,
-  ElbowDrawing,
-  TransitionDrawing,
-} from "../../../components/FittingDrawings";
-import {
-  StraightFlatPattern,
-  ElbowFlatPattern,
-} from "../../../components/FabricationDrawings";
+  collection,
+  addDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
+
+function getStatusClasses(status) {
+  if (status === "Done" || status === "Completed") {
+    return "bg-green-100 text-green-700 border-green-200";
+  }
+
+  if (status === "In Progress") {
+    return "bg-yellow-100 text-yellow-700 border-yellow-200";
+  }
+
+  return "bg-blue-100 text-blue-700 border-blue-200";
+}
+
 export default function ProjectPage() {
   const params = useParams();
   const router = useRouter();
 
   const [project, setProject] = useState(null);
-  const [items, setItems] = useState([]);
-  const [showFittingSelector, setShowFittingSelector] = useState(false);
-  const [selectedFitting, setSelectedFitting] = useState(null);
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [activeDrawingIndex, setActiveDrawingIndex] = useState(null);
+  const [orders, setOrders] = useState([]);
+
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderName, setOrderName] = useState("");
+  const [orderDate, setOrderDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [orderNotes, setOrderNotes] = useState("");
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
-
-  useEffect(() => {
-    if (project) {
-      setNotesValue(project.notes || "");
-    }
-  }, [project]);
-
-  const exportDrawingsRef = useRef(null);
-
-  const shopEmail = "shop@hvacshop.ca";
-
-  const [straightForm, setStraightForm] = useState({
-    width: "",
-    height: "",
-    length: "",
-    quantity: "1",
-    insulated: false,
-  });
-
-  const [elbowForm, setElbowForm] = useState({
-    width: "",
-    height: "",
-    angle: "90",
-    radius: "",
-    quantity: "1",
-    insulated: false,
-    bendType: "short",
-  });
-
-  const [transitionForm, setTransitionForm] = useState({
-    width1: "",
-    height1: "",
-    width2: "",
-    height2: "",
-    length: "",
-    quantity: "1",
-    insulated: false,
-    justification: "center",
-  });
-
-  const [offsetForm, setOffsetForm] = useState({
-    width: "",
-    height: "",
-    offset: "",
-    length: "",
-    quantity: "1",
-    insulated: false,
-    direction: "right",
-  });
 
   useEffect(() => {
     if (!params.id) return;
@@ -87,7 +54,6 @@ export default function ProjectPage() {
     const unsubscribe = onSnapshot(projectRef, (snapshot) => {
       if (!snapshot.exists()) {
         setProject(null);
-        setItems([]);
         return;
       }
 
@@ -97,120 +63,35 @@ export default function ProjectPage() {
       };
 
       setProject(projectData);
-      setItems(projectData.items || []);
     });
 
     return () => unsubscribe();
   }, [params.id]);
 
-  const saveItemsToProject = async (updatedItems) => {
+  useEffect(() => {
     if (!params.id) return;
 
-    const projectRef = doc(db, "projects", params.id);
+    const ordersRef = collection(db, "projects", params.id, "orders");
+    const q = query(ordersRef, orderBy("createdAt", "desc"));
 
-    await updateDoc(projectRef, {
-      items: updatedItems,
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const ordersList = snapshot.docs.map((docItem) => ({
+        id: docItem.id,
+        ...docItem.data(),
+      }));
+
+      setOrders(ordersList);
     });
-  };
 
-  const updateItemInProject = async (updatedItem) => {
-    if (editingIndex === null) return;
+    return () => unsubscribe();
+  }, [params.id]);
 
-    const updatedItems = items.map((item, index) =>
-      index === editingIndex ? updatedItem : item
-    );
-
-    await saveItemsToProject(updatedItems);
-    setEditingIndex(null);
-    setSelectedFitting(null);
-  };
-
-  const handleDeleteItem = async (indexToDelete) => {
-    const updatedItems = items.filter((_, index) => index !== indexToDelete);
-    await saveItemsToProject(updatedItems);
-  };
-
-  const handleEditItem = (item, index) => {
-    setEditingIndex(index);
-    setSelectedFitting(item.type);
-    setShowFittingSelector(false);
-
-    if (item.type === "Straight") {
-      setStraightForm({
-        width: item.width || "",
-        height: item.height || "",
-        length: item.length || "",
-        quantity: item.quantity || "1",
-        insulated: item.insulated || false,
-      });
+  useEffect(() => {
+    if (project) {
+      setNotesValue(project.notes || "");
     }
+  }, [project]);
 
-    if (item.type === "Elbow") {
-      setElbowForm({
-        width: item.width || "",
-        height: item.height || "",
-        angle: item.angle || "90",
-        radius: item.radius || "",
-        quantity: item.quantity || "1",
-        insulated: item.insulated || false,
-        bendType: item.bendType || "short",
-      });
-    }
-
-    if (item.type === "Transition") {
-      setTransitionForm({
-        width1: item.width1 || "",
-        height1: item.height1 || "",
-        width2: item.width2 || "",
-        height2: item.height2 || "",
-        length: item.length || "",
-        quantity: item.quantity || "1",
-        insulated: item.insulated || false,
-        justification: item.justification || "center",
-      });
-    }
-
-    if (item.type === "Offset") {
-      setOffsetForm({
-        width: item.width || "",
-        height: item.height || "",
-        offset: item.offset || "",
-        length: item.length || "",
-        quantity: item.quantity || "1",
-        insulated: item.insulated || false,
-        direction: item.direction || "right",
-      });
-    }
-  };
-  const getStatusClasses = (status) => {
-    if (status === "Completed") {
-        return "bg-green-100 text-green-700 border-green-200";
-    }
-
-    if (status === "In Progress") {
-        return "bg-yellow-100 text-yellow-700 border-yellow-200";
-    }
-
-    return "bg-blue-100 text-blue-700 border-blue-200";
-    };
-
-  const handleUpdateStatus = async (newStatus) => {
-    if (!project) return;
-
-    try {
-        await updateDoc(doc(db, "projects", project.id), {
-        status: newStatus,
-        });
-
-        setProject((prev) => ({
-        ...prev,
-        status: newStatus,
-        }));
-    } catch (error) {
-        console.error("Error updating status:", error);
-        alert("Failed to update project status");
-    }
-    };
 
   const handleSaveNotes = async () => {
     if (!project) return;
@@ -218,500 +99,69 @@ export default function ProjectPage() {
     setIsSavingNotes(true);
 
     try {
-        await updateDoc(doc(db, "projects", project.id), {
+      await updateDoc(doc(db, "projects", project.id), {
         notes: notesValue.trim(),
-        });
+      });
 
-        setProject((prev) => ({
+      setProject((prev) => ({
         ...prev,
         notes: notesValue.trim(),
-        }));
+      }));
 
-        setIsEditingNotes(false);
+      setIsEditingNotes(false);
     } catch (error) {
-        console.error("Error updating notes:", error);
-        alert("Failed to save notes");
+      console.error("Error updating notes:", error);
+      alert("Failed to save notes");
     } finally {
-        setIsSavingNotes(false);
+      setIsSavingNotes(false);
     }
-    };
+  };
+  
 
-  const handleSelectFitting = (type) => {
-    setEditingIndex(null);
-    setSelectedFitting(type);
-    setShowFittingSelector(false);
+  const createOrder = async () => {
+    if (!orderName.trim() || !params.id) return;
+
+    try {
+      setIsCreatingOrder(true);
+
+      await addDoc(collection(db, "projects", params.id, "orders"), {
+        name: orderName.trim(),
+        date: orderDate,
+        notes: orderNotes.trim(),
+        status: "Active",
+        items: [],
+        createdAt: serverTimestamp(),
+      });
+
+      setOrderName("");
+      setOrderDate(new Date().toISOString().split("T")[0]);
+      setOrderNotes("");
+      setShowOrderModal(false);
+    } catch (error) {
+      console.error("Error creating order:", error);
+      alert("Failed to create order");
+    } finally {
+      setIsCreatingOrder(false);
+    }
   };
 
-  const handleStraightChange = (field, value) => {
-    setStraightForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleElbowChange = (field, value) => {
-    setElbowForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleTransitionChange = (field, value) => {
-    setTransitionForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleOffsetChange = (field, value) => {
-    setOffsetForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const getTransitionLabel = (value) => {
-    const labels = {
-      center: "Center",
-      "along-width": "Along Width",
-      "along-height": "Along Height",
-      "left-angle": "Left Angle",
-      "right-angle": "Right Angle",
-    };
-
-    return labels[value] || value;
-  };
-
-  const handleAddStraight = async () => {
-    if (
-      !straightForm.width.trim() ||
-      !straightForm.height.trim() ||
-      !straightForm.length.trim() ||
-      !straightForm.quantity.trim()
-    ) {
-      return;
-    }
-
-    const newItem = {
-      type: "Straight",
-      width: straightForm.width,
-      height: straightForm.height,
-      length: straightForm.length,
-      quantity: straightForm.quantity,
-      insulated: straightForm.insulated,
-    };
-
-    if (editingIndex !== null) {
-      await updateItemInProject(newItem);
-    } else {
-      const updatedItems = [...items, newItem];
-      await saveItemsToProject(updatedItems);
-      setSelectedFitting(null);
-    }
-
-    setStraightForm({
-      width: "",
-      height: "",
-      length: "",
-      quantity: "1",
-      insulated: false,
-    });
-  };
-
-  const handleAddElbow = async () => {
-    if (
-      !elbowForm.width.trim() ||
-      !elbowForm.height.trim() ||
-      !elbowForm.angle.trim() ||
-      !elbowForm.radius.trim() ||
-      !elbowForm.quantity.trim()
-    ) {
-      return;
-    }
-
-    const newItem = {
-      type: "Elbow",
-      width: elbowForm.width,
-      height: elbowForm.height,
-      angle: elbowForm.angle,
-      radius: elbowForm.radius,
-      quantity: elbowForm.quantity,
-      insulated: elbowForm.insulated,
-      bendType: elbowForm.bendType,
-    };
-
-    if (editingIndex !== null) {
-      await updateItemInProject(newItem);
-    } else {
-      const updatedItems = [...items, newItem];
-      await saveItemsToProject(updatedItems);
-      setSelectedFitting(null);
-    }
-
-    setElbowForm({
-      width: "",
-      height: "",
-      angle: "90",
-      radius: "",
-      quantity: "1",
-      insulated: false,
-      bendType: "short",
-    });
-  };
-
-  const handleAddTransition = async () => {
-    if (
-      !transitionForm.width1.trim() ||
-      !transitionForm.height1.trim() ||
-      !transitionForm.width2.trim() ||
-      !transitionForm.height2.trim() ||
-      !transitionForm.length.trim() ||
-      !transitionForm.quantity.trim()
-    ) {
-      return;
-    }
-
-    const newItem = {
-      type: "Transition",
-      width1: transitionForm.width1,
-      height1: transitionForm.height1,
-      width2: transitionForm.width2,
-      height2: transitionForm.height2,
-      length: transitionForm.length,
-      quantity: transitionForm.quantity,
-      insulated: transitionForm.insulated,
-      justification: transitionForm.justification,
-    };
-
-    if (editingIndex !== null) {
-      await updateItemInProject(newItem);
-    } else {
-      const updatedItems = [...items, newItem];
-      await saveItemsToProject(updatedItems);
-      setSelectedFitting(null);
-    }
-
-    setTransitionForm({
-      width1: "",
-      height1: "",
-      width2: "",
-      height2: "",
-      length: "",
-      quantity: "1",
-      insulated: false,
-      justification: "center",
-    });
-  };
-
-  const handleAddOffset = async () => {
-    if (
-      !offsetForm.width.trim() ||
-      !offsetForm.height.trim() ||
-      !offsetForm.offset.trim() ||
-      !offsetForm.length.trim() ||
-      !offsetForm.quantity.trim()
-    ) {
-      return;
-    }
-
-    const newItem = {
-      type: "Offset",
-      width: offsetForm.width,
-      height: offsetForm.height,
-      offset: offsetForm.offset,
-      length: offsetForm.length,
-      quantity: offsetForm.quantity,
-      insulated: offsetForm.insulated,
-      direction: offsetForm.direction,
-    };
-
-    if (editingIndex !== null) {
-      await updateItemInProject(newItem);
-    } else {
-      const updatedItems = [...items, newItem];
-      await saveItemsToProject(updatedItems);
-      setSelectedFitting(null);
-    }
-
-    setOffsetForm({
-      width: "",
-      height: "",
-      offset: "",
-      length: "",
-      quantity: "1",
-      insulated: false,
-      direction: "right",
-    });
-  };
-
-  const renderItemLabel = (item) => {
-    if (item.type === "Straight") {
-      return `Straight ${item.width}x${item.height} L${item.length} Qty ${item.quantity}${
-        item.insulated ? " INS" : ""
-      }`;
-    }
-
-    if (item.type === "Elbow") {
-      return `Elbow ${item.width}x${item.height} ${item.angle}° R${item.radius} ${
-        item.bendType === "long" ? "Long Way" : "Short Way"
-      } Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
-    }
-
-    if (item.type === "Transition") {
-      return `Transition ${item.width1}x${item.height1} -> ${item.width2}x${item.height2} L${item.length} ${getTransitionLabel(
-        item.justification || "center"
-      )} Qty ${item.quantity}${item.insulated ? " INS" : ""}`;
-    }
-
-    if (item.type === "Offset") {
-      return `Offset ${item.width}x${item.height} O${item.offset} L${item.length} ${item.direction} Qty ${item.quantity}${
-        item.insulated ? " INS" : ""
-      }`;
-    }
-
-    return item.type;
-  };
-
-    const renderFabricationDrawing = (item) => {
-        if (item.type === "Straight") {
-            return (
-            <StraightFlatPattern
-                width={item.width}
-                height={item.height}
-                length={item.length}
-            />
-            );
-        }
-
-        if (item.type === "Elbow") {
-            return (
-            <ElbowFlatPattern
-                width={item.width}
-                height={item.height}
-                radius={item.radius}
-                angle={item.angle}
-                bendType={item.bendType}
-            />
-            );
-        }
-
-        if (item.type === "Transition") {
-            return (
-            <TransitionDrawing
-                justification={item.justification}
-                width1={item.width1}
-                height1={item.height1}
-                width2={item.width2}
-                height2={item.height2}
-                length={item.length}
-            />
-            );
-        }
-
-        if (item.type === "Offset") {
-            return (
-            <OffsetDrawing
-                direction={item.direction}
-                width={item.width}
-                height={item.height}
-                length={item.length}
-                offset={item.offset}
-            />
-            );
-        }
-
-        return <div>Drawing not available</div>;
-        };
-
-    const getPdfItemFields = (item) => {
-        if (item.type === "Straight") {
-            return [
-            ["Type", "Straight"],
-            ["Width", item.width || "-"],
-            ["Heigh", item.height || "-"],
-            ["Length", item.length || "-"],
-            ["Quantity", item.quantity || "-"],
-            ["Insulation", item.insulated ? "Yes" : "No"],
-            ];
-        }
-
-        if (item.type === "Elbow") {
-            return [
-            ["Type", "Elbow"],
-            ["Width", item.width || "-"],
-            ["Heigh", item.height || "-"],
-            ["Angle", item.angle || "-"],
-            ["Radius", item.radius || "-"],
-            ["Bend type", item.bendType === "long" ? "Long Way" : "Short Way"],
-            ["Quantity", item.quantity || "-"],
-            ["Insulation", item.insulated ? "Yes" : "No"],
-            ];
-        }
-
-        if (item.type === "Transition") {
-            return [
-            ["Type", "Transition"],
-            ["Width 1", item.width1 || "-"],
-            ["Heigh 1", item.height1 || "-"],
-            ["Width 2", item.width2 || "-"],
-            ["Heigh 2", item.height2 || "-"],
-            ["Length", item.length || "-"],
-            ["Transition type", getTransitionLabel(item.justification || "center")],
-            ["Quantity", item.quantity || "-"],
-            ["Insulation", item.insulated ? "Да" : "Нет"],
-            ];
-        }
-
-        if (item.type === "Offset") {
-            return [
-            ["Type", "Offset"],
-            ["Width", item.width || "-"],
-            ["Heigh", item.height || "-"],
-            ["Offset", item.offset || "-"],
-            ["Length", item.length || "-"],
-            ["Direction", item.direction || "-"],
-            ["Quantity", item.quantity || "-"],
-            ["Insulation", item.insulated ? "Yes" : "No"],
-            ];
-        }
-
-        return [["Type", item.type || "-"]];
-        };
-
-    const handleExportPDF = async () => {
-    if (!project) return;
-
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    const docPdf = new jsPDF();
-    let currentY = 20;
-
-    docPdf.setFontSize(18);
-    docPdf.text("HVAC Duct Order", 14, currentY);
-
-    currentY += 10;
-    docPdf.setFontSize(12);
-    docPdf.text(`Project: ${project.name}`, 14, currentY);
-
-    currentY += 8;
-    docPdf.text(`Date: ${project.date || "-"}`, 14, currentY);
-
-    currentY += 8;
-    docPdf.text(`Notes: ${project?.notes || "-"}`, 14, currentY);
-
-    currentY += 8;
-    docPdf.text(`Total items: ${items.length}`, 14, currentY);
-
-    currentY += 12;
-
-    for (let index = 0; index < items.length; index++) {
-        const item = items[index];
-
-        if (currentY > 230) {
-        docPdf.addPage();
-        currentY = 20;
-        }
-
-        docPdf.setFontSize(13);
-        docPdf.setFont(undefined, "bold");
-        docPdf.text(`Item ${index + 1}`, 14, currentY);
-        docPdf.setFont(undefined, "normal");
-
-        currentY += 4;
-
-        const fields = getPdfItemFields(item);
-
-        autoTable(docPdf, {
-        startY: currentY,
-        body: fields,
-        theme: "grid",
-        styles: {
-            fontSize: 10,
-            cellPadding: 2.5,
-        },
-        columnStyles: {
-            0: { cellWidth: 55, fontStyle: "bold" },
-            1: { cellWidth: 110 },
-        },
-        margin: { left: 14, right: 14 },
-        });
-
-        currentY = docPdf.lastAutoTable.finalY + 8;
-
-        const drawingNode = document.getElementById(`pdf-drawing-${index}`);
-
-        if (drawingNode) {
-        try {
-            const dataUrl = await toPng(drawingNode, {
-            cacheBust: true,
-            pixelRatio: 2,
-            backgroundColor: "#ffffff",
-            });
-
-            const imgWidth = 170;
-            const imgHeight = 95;
-
-            if (currentY + imgHeight > 280) {
-            docPdf.addPage();
-            currentY = 20;
-            }
-
-            docPdf.addImage(dataUrl, "PNG", 14, currentY, imgWidth, imgHeight);
-            currentY += imgHeight + 12;
-        } catch (error) {
-            console.error("Could not export drawing image:", error);
-            docPdf.setTextColor(200, 0, 0);
-            docPdf.text("Drawing export failed for this item.", 14, currentY);
-            docPdf.setTextColor(0, 0, 0);
-            currentY += 10;
-        }
-        } else {
-        docPdf.setTextColor(200, 0, 0);
-        docPdf.text("Drawing not found for this item.", 14, currentY);
-        docPdf.setTextColor(0, 0, 0);
-        currentY += 10;
-        }
-    }
-
-    const fileName = `${project.name.replace(/\s+/g, "_")}_duct_order.pdf`;
-    docPdf.save(fileName);
-    };
-
-    const handleSendToShop = () => {
-        if (!project) return;
-
-        const subject = `HVAC Duct Order - ${project.name}`;
-
-        let body = `Project: ${project.name}\n`;
-        body += `Date: ${project?.date || "-"}\n`;
-        body += `Total items: ${items.length}\n\n`;
-        body += `Notes: ${project?.notes || "-"}\n`;
-        body += `Items:\n\n`;
-
-        if (items.length === 0) {
-            body += "No items in order.\n";
-        } else {
-            items.forEach((item, index) => {
-            body += `${index + 1}. ${renderItemLabel(item)}\n`;
-            });
-    }
-
-    body += `\nPlease attach the exported PDF with drawings before sending.\n`;
-
-    const mailtoLink = `mailto:${shopEmail}?subject=${encodeURIComponent(
-        subject
-    )}&body=${encodeURIComponent(body)}`;
-
-    window.location.href = mailtoLink;
-    };
-
-    const handleBackFromForm = () => {
-        setSelectedFitting(null);
-        setEditingIndex(null);
-        };
+  if (!project) {
+    return (
+      <main className="p-6 max-w-xl mx-auto bg-white text-gray-900 min-h-screen">
+        <button
+          onClick={() => router.push("/")}
+          className="mb-4 text-blue-600 font-medium hover:underline"
+        >
+          ← Back to Projects
+        </button>
+
+        <p>Loading project...</p>
+      </main>
+    );
+  }
 
   return (
-    <main className="p-6 max-w-xl mx-auto">
+    <main className="p-6 max-w-xl mx-auto bg-white text-gray-900 min-h-screen">
       <button
         onClick={() => router.push("/")}
         className="mb-4 text-blue-600 font-medium hover:underline"
@@ -719,804 +169,173 @@ export default function ProjectPage() {
         ← Back to Projects
       </button>
 
-      <h1 className="text-3xl font-bold mb-6">
-        {project ? project.name : "Project not found"}
-      </h1>
+      <h1 className="text-3xl font-bold mb-6">{project.name}</h1>
 
-        {project && (
-        <div className="mb-6 rounded-xl border border-gray-300 bg-white p-4 space-y-3 text-gray-900">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-900">Status:</span>
-                <span
-                className={`text-sm px-3 py-1 rounded-full border ${getStatusClasses(
-                    project?.status || "Active"
-                )}`}
-                >
-                {project?.status || "Active"}
-                </span>
-            </div>
+      <div className="mb-6 rounded-xl border border-gray-300 bg-white p-4 space-y-3 text-gray-900">
 
-            <div className="flex gap-2 flex-wrap">
-                <button
-                onClick={() => handleUpdateStatus("Active")}
-                className="text-sm border px-3 py-1 rounded-lg hover:bg-white"
-                >
-                Mark Active
-                </button>
+        <p className="text-sm text-gray-900">
+          <span className="font-semibold text-gray-900">Date:</span>{" "}
+          {project?.date || "-"}
+        </p>
 
-                <button
-                onClick={() => handleUpdateStatus("In Progress")}
-                className="text-sm border px-3 py-1 rounded-lg hover:bg-white"
-                >
-                In Progress
-                </button>
-
-                <button
-                onClick={() => handleUpdateStatus("Completed")}
-                className="text-sm border px-3 py-1 rounded-lg hover:bg-white"
-                >
-                Mark as Done
-                </button>
-            </div>
-            </div>
-
-            <p className="text-sm text-gray-900">
-            <span className="font-medium text-gray-900">Date:</span>{" "}
-            {project?.date || "-"}
-            </p>
-
-            <div>
-            <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-gray-900">Notes</span>
-
-                {!isEditingNotes ? (
-                <button
-                    onClick={() => setIsEditingNotes(true)}
-                    className="text-sm text-blue-600 hover:underline"
-                >
-                    Edit
-                </button>
-                ) : (
-                <div className="flex gap-2">
-                    <button
-                    onClick={handleSaveNotes}
-                    disabled={isSavingNotes}
-                    className="text-sm text-green-600 hover:underline"
-                    >
-                    {isSavingNotes ? "Saving..." : "Save"}
-                    </button>
-
-                    <button
-                    onClick={() => {
-                        setIsEditingNotes(false);
-                        setNotesValue(project.notes || "");
-                    }}
-                    className="text-sm text-gray-800 hover:underline"
-                    >
-                    Cancel
-                    </button>
-                </div>
-                )}
-            </div>
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-semibold text-gray-900">Notes</span>
 
             {!isEditingNotes ? (
-                <p className="text-sm text-gray-900 whitespace-pre-line">
-                {project?.notes || "-"}
-                </p>
-            ) : (
-                <textarea
-                value={notesValue}
-                onChange={(e) => setNotesValue(e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm min-h-[80px]"
-                />
-            )}
-            </div>
-        </div>
-        )}
-      
-
-
-      {!showFittingSelector && !selectedFitting && (
-        <>
-          <div className="space-y-3 mb-6">
-            <button
-              onClick={() => setShowFittingSelector(true)}
-              className="w-full bg-green-600 text-white py-3 rounded-xl text-lg"
-            >
-              + Add Fitting
-            </button>
-
-            <button
-              onClick={handleExportPDF}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl text-lg"
-            >
-              Export PDF
-            </button>
-
-            <button
-              onClick={handleSendToShop}
-              className="w-full bg-gray-900 text-white py-3 rounded-xl text-lg"
-            >
-              Send to Shop
-            </button>
-          </div>
-
-          {items.length === 0 ? (
-            <p className="text-gray-800">No fittings yet</p>
-          ) : (
-            <div className="space-y-3">
-              {items.map((item, index) => (
-                <div key={index} className="space-y-3">
-                    <div className="border rounded-xl p-4 flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                        <p className="text-lg font-medium">{renderItemLabel(item)}</p>
-                    </div>
-
-                    <div className="shrink-0 flex flex-col gap-2">
-                        <button
-                        onClick={() => handleEditItem(item, index)}
-                        className="border border-blue-300 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-50"
-                        >
-                        Edit
-                        </button>
-
-                        <button
-                        onClick={() => handleDeleteItem(index)}
-                        className="border border-red-300 text-red-600 px-3 py-1 rounded-lg hover:bg-red-50"
-                        >
-                        Delete
-                        </button>
-
-                        <button
-                        onClick={() =>
-                            setActiveDrawingIndex(
-                            activeDrawingIndex === index ? null : index
-                            )
-                        }
-                        className="border border-gray-800 text-gray-800 px-3 py-1 rounded-lg hover:bg-gray-100"
-                        >
-                        Drawing
-                        </button>
-                    </div>
-                    </div>
-
-                    {activeDrawingIndex === index && (
-                    <div className="p-4 border rounded-xl bg-gray-50">
-                        {renderFabricationDrawing(item)}
-                    </div>
-                    )}
-                </div>
-                ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {showFittingSelector && !selectedFitting && (
-        <>
-          <h2 className="text-2xl font-semibold mb-4">Select Fitting</h2>
-
-          <div className="grid grid-cols-1 gap-3 mb-6">
-            <button
-              onClick={() => handleSelectFitting("Straight")}
-              className="w-full border rounded-xl p-4 text-left text-lg hover:bg-gray-50"
-            >
-              Straight
-            </button>
-
-            <button
-              onClick={() => handleSelectFitting("Elbow")}
-              className="w-full border rounded-xl p-4 text-left text-lg hover:bg-gray-50"
-            >
-              Elbow
-            </button>
-
-            <button
-              onClick={() => handleSelectFitting("Transition")}
-              className="w-full border rounded-xl p-4 text-left text-lg hover:bg-gray-50"
-            >
-              Transition
-            </button>
-
-            <button
-              onClick={() => handleSelectFitting("Offset")}
-              className="w-full border rounded-xl p-4 text-left text-lg hover:bg-gray-50"
-            >
-              Offset
-            </button>
-          </div>
-
-          <button
-            onClick={() => setShowFittingSelector(false)}
-            className="w-full border py-3 rounded-xl text-lg"
-          >
-            Cancel
-          </button>
-        </>
-      )}
-
-      {selectedFitting === "Straight" && (
-        <>
-          <h2 className="text-2xl font-semibold mb-4">Straight Duct</h2>
-
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block mb-1 font-medium">Width</label>
-              <input
-                type="number"
-                value={straightForm.width}
-                onChange={(e) => handleStraightChange("width", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="14"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Height</label>
-              <input
-                type="number"
-                value={straightForm.height}
-                onChange={(e) => handleStraightChange("height", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="10"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Length</label>
-              <input
-                type="number"
-                value={straightForm.length}
-                onChange={(e) => handleStraightChange("length", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="60"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Quantity</label>
-              <input
-                type="number"
-                value={straightForm.quantity}
-                onChange={(e) =>
-                  handleStraightChange("quantity", e.target.value)
-                }
-                className="w-full border rounded-xl p-3"
-                placeholder="1"
-              />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                id="straight-insulated"
-                type="checkbox"
-                checked={straightForm.insulated}
-                onChange={(e) =>
-                  handleStraightChange("insulated", e.target.checked)
-                }
-                className="h-5 w-5"
-              />
-              <label htmlFor="straight-insulated" className="font-medium">
-                Insulated
-              </label>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={handleAddStraight}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl text-lg"
-            >
-              {editingIndex !== null ? "Save Changes" : "Add to Order"}
-            </button>
-
-            <button
-              onClick={handleBackFromForm}
-              className="w-full border py-3 rounded-xl text-lg"
-            >
-              Back
-            </button>
-          </div>
-        </>
-      )}
-
-      {selectedFitting === "Elbow" && (
-        <>
-          <h2 className="text-2xl font-semibold mb-4">Rectangular Elbow</h2>
-
-          <div className="mb-6 rounded-xl border p-4 bg-gray-50">
-            <ElbowDrawing
-              bendType={elbowForm.bendType}
-              width={elbowForm.width}
-              height={elbowForm.height}
-              radius={elbowForm.radius}
-              angle={elbowForm.angle}
-            />
-          </div>
-
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block mb-1 font-medium">Width</label>
-              <input
-                type="number"
-                value={elbowForm.width}
-                onChange={(e) => handleElbowChange("width", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="14"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Height</label>
-              <input
-                type="number"
-                value={elbowForm.height}
-                onChange={(e) => handleElbowChange("height", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="10"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Angle</label>
-              <select
-                value={elbowForm.angle}
-                onChange={(e) => handleElbowChange("angle", e.target.value)}
-                className="w-full border rounded-xl p-3"
+              <button
+                onClick={() => setIsEditingNotes(true)}
+                className="text-sm text-blue-600 font-medium"
               >
-                <option value="90">90°</option>
-                <option value="45">45°</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block mb-2 font-medium">Bend Type</label>
-              <div className="grid grid-cols-2 gap-2">
+                Edit
+              </button>
+            ) : (
+              <div className="flex gap-2">
                 <button
-                  type="button"
-                  onClick={() => handleElbowChange("bendType", "short")}
-                  className={`rounded-xl border p-3 text-sm ${
-                    elbowForm.bendType === "short"
-                      ? "border-blue-600 bg-blue-50 text-blue-700"
-                      : "border-gray-300"
-                  }`}
+                  onClick={handleSaveNotes}
+                  disabled={isSavingNotes}
+                  className="text-sm text-green-600 font-medium"
                 >
-                  Short Way
+                  {isSavingNotes ? "Saving..." : "Save"}
                 </button>
 
                 <button
-                  type="button"
-                  onClick={() => handleElbowChange("bendType", "long")}
-                  className={`rounded-xl border p-3 text-sm ${
-                    elbowForm.bendType === "long"
-                      ? "border-blue-600 bg-blue-50 text-blue-700"
-                      : "border-gray-300"
-                  }`}
+                  onClick={() => {
+                    setIsEditingNotes(false);
+                    setNotesValue(project.notes || "");
+                  }}
+                  className="text-sm text-gray-700 font-medium"
                 >
-                  Long Way
+                  Cancel
                 </button>
               </div>
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Radius</label>
-              <input
-                type="number"
-                value={elbowForm.radius}
-                onChange={(e) => handleElbowChange("radius", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="8"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Quantity</label>
-              <input
-                type="number"
-                value={elbowForm.quantity}
-                onChange={(e) => handleElbowChange("quantity", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="1"
-              />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                id="elbow-insulated"
-                type="checkbox"
-                checked={elbowForm.insulated}
-                onChange={(e) =>
-                  handleElbowChange("insulated", e.target.checked)
-                }
-                className="h-5 w-5"
-              />
-              <label htmlFor="elbow-insulated" className="font-medium">
-                Insulated
-              </label>
-            </div>
+            )}
           </div>
 
-          <div className="space-y-3">
-            <button
-              onClick={handleAddElbow}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl text-lg"
-            >
-              {editingIndex !== null ? "Save Changes" : "Add to Order"}
-            </button>
-
-            <button
-              onClick={handleBackFromForm}
-              className="w-full border py-3 rounded-xl text-lg"
-            >
-              Back
-            </button>
-          </div>
-        </>
-      )}
-
-      {selectedFitting === "Transition" && (
-        <>
-          <h2 className="text-2xl font-semibold mb-4">Rectangular Transition</h2>
-
-          <div className="mb-6 rounded-xl border p-4 bg-gray-50">
-            <TransitionDrawing
-              justification={transitionForm.justification}
-              width1={transitionForm.width1}
-              height1={transitionForm.height1}
-              width2={transitionForm.width2}
-              height2={transitionForm.height2}
-              length={transitionForm.length}
+          {!isEditingNotes ? (
+            <p className="text-sm text-gray-900 whitespace-pre-line">
+              {project?.notes || "-"}
+            </p>
+          ) : (
+            <textarea
+              value={notesValue}
+              onChange={(e) => setNotesValue(e.target.value)}
+              className="w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded-lg p-2 text-sm min-h-[80px]"
             />
-          </div>
-
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block mb-1 font-medium">Width 1</label>
-              <input
-                type="number"
-                value={transitionForm.width1}
-                onChange={(e) =>
-                  handleTransitionChange("width1", e.target.value)
-                }
-                className="w-full border rounded-xl p-3"
-                placeholder="14"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Height 1</label>
-              <input
-                type="number"
-                value={transitionForm.height1}
-                onChange={(e) =>
-                  handleTransitionChange("height1", e.target.value)
-                }
-                className="w-full border rounded-xl p-3"
-                placeholder="10"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Width 2</label>
-              <input
-                type="number"
-                value={transitionForm.width2}
-                onChange={(e) =>
-                  handleTransitionChange("width2", e.target.value)
-                }
-                className="w-full border rounded-xl p-3"
-                placeholder="10"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Height 2</label>
-              <input
-                type="number"
-                value={transitionForm.height2}
-                onChange={(e) =>
-                  handleTransitionChange("height2", e.target.value)
-                }
-                className="w-full border rounded-xl p-3"
-                placeholder="8"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Length</label>
-              <input
-                type="number"
-                value={transitionForm.length}
-                onChange={(e) =>
-                  handleTransitionChange("length", e.target.value)
-                }
-                className="w-full border rounded-xl p-3"
-                placeholder="12"
-              />
-            </div>
-
-            <div>
-            <label className="block mb-2 font-medium">Transition Type</label>
-
-            <div className="grid grid-cols-3 gap-2">
-                {[
-                { value: "top-left", label: "↖" },
-                { value: "top", label: "↑" },
-                { value: "top-right", label: "↗" },
-
-                { value: "left", label: "←" },
-                { value: "center", label: "•" },
-                { value: "right", label: "→" },
-
-                { value: "bottom-left", label: "↙" },
-                { value: "bottom", label: "↓" },
-                { value: "bottom-right", label: "↘" },
-                ].map((option) => (
-                <button
-                    key={option.value}
-                    type="button"
-                    onClick={() =>
-                    handleTransitionChange("justification", option.value)
-                    }
-                    className={`h-14 rounded-xl border text-lg flex items-center justify-center ${
-                    transitionForm.justification === option.value
-                        ? "border-blue-600 bg-blue-50 text-blue-700"
-                        : "border-gray-300"
-                    }`}
-                >
-                    {option.label}
-                </button>
-                ))}
-            </div>
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Quantity</label>
-              <input
-                type="number"
-                value={transitionForm.quantity}
-                onChange={(e) =>
-                  handleTransitionChange("quantity", e.target.value)
-                }
-                className="w-full border rounded-xl p-3"
-                placeholder="1"
-              />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                id="transition-insulated"
-                type="checkbox"
-                checked={transitionForm.insulated}
-                onChange={(e) =>
-                  handleTransitionChange("insulated", e.target.checked)
-                }
-                className="h-5 w-5"
-              />
-              <label htmlFor="transition-insulated" className="font-medium">
-                Insulated
-              </label>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={handleAddTransition}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl text-lg"
-            >
-              {editingIndex !== null ? "Save Changes" : "Add to Order"}
-            </button>
-
-            <button
-              onClick={handleBackFromForm}
-              className="w-full border py-3 rounded-xl text-lg"
-            >
-              Back
-            </button>
-          </div>
-        </>
-      )}
-
-      {selectedFitting === "Offset" && (
-        <>
-          <h2 className="text-2xl font-semibold mb-4">Rectangular Offset</h2>
-
-          <div className="mb-6 rounded-xl border p-4 bg-gray-50">
-            <OffsetDrawing
-              direction={offsetForm.direction}
-              width={offsetForm.width}
-              height={offsetForm.height}
-              length={offsetForm.length}
-              offset={offsetForm.offset}
-            />
-          </div>
-
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block mb-1 font-medium">Width</label>
-              <input
-                type="number"
-                value={offsetForm.width}
-                onChange={(e) => handleOffsetChange("width", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="14"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Height</label>
-              <input
-                type="number"
-                value={offsetForm.height}
-                onChange={(e) => handleOffsetChange("height", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="10"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Offset Distance</label>
-              <input
-                type="number"
-                value={offsetForm.offset}
-                onChange={(e) => handleOffsetChange("offset", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="12"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-2 font-medium">Direction</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleOffsetChange("direction", "left")}
-                  className={`rounded-xl border p-3 text-sm ${
-                    offsetForm.direction === "left"
-                      ? "border-blue-600 bg-blue-50 text-blue-700"
-                      : "border-gray-300"
-                  }`}
-                >
-                  Left
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleOffsetChange("direction", "right")}
-                  className={`rounded-xl border p-3 text-sm ${
-                    offsetForm.direction === "right"
-                      ? "border-blue-600 bg-blue-50 text-blue-700"
-                      : "border-gray-300"
-                  }`}
-                >
-                  Right
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleOffsetChange("direction", "up")}
-                  className={`rounded-xl border p-3 text-sm ${
-                    offsetForm.direction === "up"
-                      ? "border-blue-600 bg-blue-50 text-blue-700"
-                      : "border-gray-300"
-                  }`}
-                >
-                  Up
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleOffsetChange("direction", "down")}
-                  className={`rounded-xl border p-3 text-sm ${
-                    offsetForm.direction === "down"
-                      ? "border-blue-600 bg-blue-50 text-blue-700"
-                      : "border-gray-300"
-                  }`}
-                >
-                  Down
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Length</label>
-              <input
-                type="number"
-                value={offsetForm.length}
-                onChange={(e) => handleOffsetChange("length", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="30"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium">Quantity</label>
-              <input
-                type="number"
-                value={offsetForm.quantity}
-                onChange={(e) => handleOffsetChange("quantity", e.target.value)}
-                className="w-full border rounded-xl p-3"
-                placeholder="1"
-              />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                id="offset-insulated"
-                type="checkbox"
-                checked={offsetForm.insulated}
-                onChange={(e) =>
-                  handleOffsetChange("insulated", e.target.checked)
-                }
-                className="h-5 w-5"
-              />
-              <label htmlFor="offset-insulated" className="font-medium">
-                Insulated
-              </label>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={handleAddOffset}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl text-lg"
-            >
-              {editingIndex !== null ? "Save Changes" : "Add to Order"}
-            </button>
-
-            <button
-              onClick={handleBackFromForm}
-              className="w-full border py-3 rounded-xl text-lg"
-            >
-              Back
-            </button>
-          </div>
-        </>
-      )}
-
-      <div
-        ref={exportDrawingsRef}
-        style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "900px",
-            background: "#ffffff",
-            padding: "20px",
-            opacity: 0,
-            pointerEvents: "none",
-            zIndex: -1,
-            }}
-        >
-        {items.map((item, index) => (
-            <div
-            key={`pdf-drawing-${index}`}
-            id={`pdf-drawing-${index}`}
-            style={{
-                width: "820px",
-                background: "#ffffff",
-                padding: "16px",
-                marginBottom: "24px",
-                border: "1px solid #e5e7eb",
-            }}
-            >
-            <div
-                style={{
-                fontSize: "18px",
-                fontWeight: 600,
-                marginBottom: "12px",
-                color: "#111827",
-                }}
-            >
-                {index + 1}. {renderItemLabel(item)}
-            </div>
-
-            {renderFabricationDrawing(item)}
-            </div>
-        ))}
+          )}
         </div>
-    
+      </div>
+
+      <button
+        onClick={() => setShowOrderModal(true)}
+        className="w-full bg-blue-600 text-white py-3 rounded-xl mb-6 text-lg"
+      >
+        + New Order
+      </button>
+
+      {orders.length === 0 ? (
+        <p className="text-gray-700">No orders yet</p>
+      ) : (
+        <div className="space-y-3">
+          {orders.map((order) => (
+            <Link
+              key={order.id}
+              href={`/project/${project.id}/order/${order.id}`}
+            >
+              <div className="border rounded-xl p-4 shadow-sm hover:bg-gray-50 cursor-pointer bg-white">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-semibold">{order.name}</h2>
+
+                    <p className="text-gray-700 text-sm">
+                      Date: {order.date || "-"}
+                    </p>
+
+                    <p className="text-gray-700 text-sm">
+                      Items: {order.items ? order.items.length : 0}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`text-xs px-3 py-1 rounded-full border ${
+                      order.status === "Completed"
+                        ? "bg-green-100 text-green-700 border-green-200"
+                        : order.status === "In Progress"
+                        ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                        : "bg-blue-100 text-blue-700 border-blue-200"
+                    }`}
+                  >
+                    {order.status || "Active"}
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {showOrderModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white p-6 rounded-xl w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">New Order</h2>
+
+            <div className="mb-3">
+              <label className="block text-sm font-semibold mb-1 text-gray-900">
+                Order Name
+              </label>
+              <input
+                type="text"
+                placeholder="Enter order name"
+                value={orderName}
+                onChange={(e) => setOrderName(e.target.value)}
+                className="w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 p-3 rounded-lg"
+              />
+            </div>
+
+            <div className="mb-3">
+              <label className="block text-sm font-semibold mb-1 text-gray-900">
+                Date
+              </label>
+              <input
+                type="date"
+                value={orderDate}
+                onChange={(e) => setOrderDate(e.target.value)}
+                className="w-full border border-gray-300 bg-white text-gray-900 p-3 rounded-lg"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold mb-1 text-gray-900">
+                Notes
+              </label>
+              <textarea
+                placeholder="Notes for this order"
+                value={orderNotes}
+                onChange={(e) => setOrderNotes(e.target.value)}
+                className="w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 p-3 rounded-lg min-h-[90px]"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={createOrder}
+                disabled={isCreatingOrder || !orderName.trim()}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+              >
+                {isCreatingOrder ? "Creating..." : "Create"}
+              </button>
+
+              <button
+                onClick={() => setShowOrderModal(false)}
+                disabled={isCreatingOrder}
+                className="flex-1 border border-gray-300 bg-white text-gray-900 px-4 py-2 rounded-lg disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
