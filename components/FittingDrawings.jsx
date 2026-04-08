@@ -30,23 +30,15 @@ export function StraightDrawing({
 
         {/* top */}
         <path
-          d="M40 50 L150 50 L180 30 L70 30 Z"
+          d="M40 50 L170 50 L200 30 L70 30 Z"
           fill="url(#straight-top)"
-          stroke="#374151"
-          strokeWidth="1.5"
-        />
-
-        {/* left side */}
-        <path
-          d="M40 50 L70 30 L70 110 L40 130 Z"
-          fill="url(#straight-side)"
           stroke="#374151"
           strokeWidth="1.5"
         />
 
         {/* front */}
         <path
-          d="M40 50 L150 50 L150 130 L40 130 Z"
+          d="M40 50 L170 50 L170 130 L40 130 Z"
           fill="url(#straight-front)"
           stroke="#374151"
           strokeWidth="1.5"
@@ -54,22 +46,22 @@ export function StraightDrawing({
 
         {/* right side */}
         <path
-          d="M150 50 L180 30 L180 110 L150 130 Z"
+          d="M170 50 L200 30 L200 110 L170 130 Z"
           fill="url(#straight-side)"
           stroke="#374151"
           strokeWidth="1.5"
         />
 
         {/* labels */}
-        <text x="95" y="145" fontSize="14" fontWeight="700" fill="#b91c1c">
+        <text x="185" y="135" fontSize="14" fontWeight="700" fill="#b91c1c">
           {width || "-"}
         </text>
 
-        <text x="185" y="95" fontSize="14" fontWeight="700" fill="#b91c1c">
+        <text x="205" y="75" fontSize="14" fontWeight="700" fill="#b91c1c">
           {height || "-"}
         </text>
 
-        <text x="100" y="75" fontSize="14" fontWeight="600" fill="#374151">
+        <text x="100" y="145" fontSize="14" fontWeight="600" fill="#b91c1c">
           {length || "-"}
         </text>
       </svg>
