@@ -19,6 +19,13 @@ function getTodayDate() {
   return new Date().toISOString().split("T")[0];
 }
 
+function getAutoElbowBendType(width, height) {
+  const w = Number(width) || 0;
+  const h = Number(height) || 0;
+
+  return h >= w ? "short" : "long";
+}
+
 function getStatusClasses(status) {
   if (status === "Done") {
     return "bg-green-100 text-green-700 border-green-200";
@@ -51,17 +58,16 @@ function createEmptyItem(type) {
     };
   }
 
-  if (type === "elbow") {
+    if (type === "elbow") {
     return {
-      ...base,
-      name: "Elbow",
-      width: "",
-      height: "",
-      radius: "",
-      angle: "90",
-      bendType: "short",
+        ...base,
+        name: "Elbow",
+        width: "",
+        height: "",
+        radius: "",
+        angle: "90",
     };
-  }
+    }
 
   if (type === "transition") {
     return {
@@ -95,7 +101,7 @@ function FittingPreview({ item }) {
                 width={item.width}
                 height={item.height}
                 length={item.length}
-                className="w-full max-w-md"
+                className="w-full max-w-sm"
             />
 
             <StraightFlatPattern
@@ -112,21 +118,21 @@ function FittingPreview({ item }) {
     return (
       <div className="space-y-3">
         <ElbowDrawing
-          bendType={item.bendType}
-          width={item.width}
-          height={item.height}
-          radius={item.radius}
-          angle={item.angle}
-          className="w-full max-w-md"
+        bendType={getAutoElbowBendType(item.width, item.height)}
+        width={item.width}
+        height={item.height}
+        radius={item.radius}
+        angle={item.angle}
+        className="w-full max-w-sm"
         />
 
         <ElbowFlatPattern
-          width={item.width}
-          height={item.height}
-          radius={item.radius}
-          angle={item.angle}
-          bendType={item.bendType}
-          className="w-full"
+        width={item.width}
+        height={item.height}
+        radius={item.radius}
+        angle={item.angle}
+        bendType={getAutoElbowBendType(item.width, item.height)}
+        className="w-full"
         />
       </div>
     );
@@ -141,7 +147,7 @@ function FittingPreview({ item }) {
         width2={item.width2}
         height2={item.height2}
         length={item.length}
-        className="w-full max-w-md"
+        className="w-full max-w-sm"
       />
     );
   }
@@ -154,7 +160,7 @@ function FittingPreview({ item }) {
         height={item.height}
         length={item.length}
         offset={item.offset}
-        className="w-full max-w-md"
+        className="w-full max-w-sm"
       />
     );
   }
@@ -263,10 +269,15 @@ export default function OrderPage() {
  const handleSaveItem = async () => {
   if (!order) return;
 
-  const preparedItem = {
+    const preparedItem = {
     ...newItem,
     quantity: Number(newItem.quantity) || 1,
-  };
+    ...(newItem.type === "elbow"
+        ? {
+            bendType: getAutoElbowBendType(newItem.width, newItem.height),
+        }
+        : {}),
+    };
 
   setIsSavingItem(true);
 
@@ -338,8 +349,7 @@ export default function OrderPage() {
 
   if (!order) {
     return (
-      <main className="p-4 sm:p-6 max-w-5xl mx-auto bg-white text-gray-900 min-h-screen">
-        <button
+        <main className="w-full max-w-screen-sm mx-auto px-4 py-4 bg-white text-gray-900 min-h-screen">        <button
           onClick={() => router.push(`/project/${projectId}`)}
           className="mb-4 text-blue-700 font-medium hover:underline"
         >
@@ -352,8 +362,7 @@ export default function OrderPage() {
   }
 
   return (
-    <main className="p-4 sm:p-6 max-w-5xl mx-auto bg-white text-gray-900 min-h-screen">
-      <button
+        <main className="w-full max-w-screen-sm mx-auto px-4 py-4 bg-white text-gray-900 min-h-screen">      <button
         onClick={() => router.push(`/project/${projectId}`)}
         className="mb-4 text-blue-700 font-medium hover:underline"
       >
@@ -502,7 +511,7 @@ export default function OrderPage() {
           {items.map((item, index) => (
             <div
                 key={item.id}
-                className="rounded-xl border border-gray-300 bg-white p-4 shadow-sm"
+                className="w-full rounded-xl border border-gray-300 bg-white p-4 shadow-sm"
             >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
@@ -530,7 +539,12 @@ export default function OrderPage() {
                         <div>H: {item.height || "-"}</div>
                         <div>R: {item.radius || "-"}</div>
                         <div>Angle: {item.angle || "-"}</div>
-                        <div>Bend: {item.bendType || "-"}</div>
+                        <div>
+                            Bend:{" "}
+                            {getAutoElbowBendType(item.width, item.height) === "short"
+                                ? "Short Way"
+                                : "Long Way"}
+                        </div>
                         <div>Qty: {item.quantity || 1}</div>
                         </>
                     )}
@@ -560,7 +574,7 @@ export default function OrderPage() {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 sm:justify-end">
+                <div className="flex gap-2 sm:justify-end flex-nowrap">
                     <button
                     onClick={() => handleEditItem(item)}
                     className="text-sm border border-gray-300 bg-white text-gray-900 px-3 py-2 rounded-lg"
@@ -587,7 +601,7 @@ export default function OrderPage() {
                 </div>
 
                 {expandedDrawingId === item.id && (
-                <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3 overflow-hidden">
                     <FittingPreview item={item} />
                 </div>
                 )}
@@ -737,20 +751,14 @@ export default function OrderPage() {
                     className="w-full border border-gray-300 bg-white text-gray-900 p-3 rounded-lg"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-1 text-gray-900">
-                    Bend Type
-                  </label>
-                  <select
-                    value={newItem.bendType}
-                    onChange={(e) => updateNewItemField("bendType", e.target.value)}
-                    className="w-full border border-gray-300 bg-white text-gray-900 p-3 rounded-lg"
-                  >
-                    <option value="short">Short Way</option>
-                    <option value="long">Long Way</option>
-                  </select>
-                </div>
+                    <div className="sm:col-span-3">
+                        <p className="text-sm text-gray-700">
+                            <span className="font-semibold">Bend Type:</span>{" "}
+                            {getAutoElbowBendType(newItem.width, newItem.height) === "short"
+                            ? "Short Way"
+                            : "Long Way"}
+                        </p>
+                    </div>
               </div>
             )}
 
@@ -908,7 +916,7 @@ export default function OrderPage() {
             )}
 
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-4">
-              <div className="text-sm font-semibold text-gray-900 mb-3">Preview</div>
+              <div className="text-sm font-semibold text-gray-900 mb-3 overflow-hidden">Preview</div>
               <FittingPreview item={newItem} />
             </div>
 

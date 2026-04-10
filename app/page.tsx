@@ -77,7 +77,7 @@ export default function Home() {
   };
 
 return (
-  <main className="p-6 max-w-xl mx-auto">
+  <main className="w-full max-w-screen-sm mx-auto px-4 py-4">
     <h1 className="text-3xl font-bold mb-6">HVAC Duct Orders</h1>
 
     <button

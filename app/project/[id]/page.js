@@ -147,7 +147,7 @@ export default function ProjectPage() {
 
   if (!project) {
     return (
-      <main className="p-6 max-w-xl mx-auto bg-white text-gray-900 min-h-screen">
+      <main className="w-full max-w-screen-sm mx-auto px-4 py-4 bg-white text-gray-900 min-h-screen">
         <button
           onClick={() => router.push("/")}
           className="mb-4 text-blue-600 font-medium hover:underline"
@@ -161,7 +161,7 @@ export default function ProjectPage() {
   }
 
   return (
-    <main className="p-6 max-w-xl mx-auto bg-white text-gray-900 min-h-screen">
+    <main className="w-full max-w-screen-sm mx-auto px-4 py-4 bg-white text-gray-900 min-h-screen">
       <button
         onClick={() => router.push("/")}
         className="mb-4 text-blue-600 font-medium hover:underline"
