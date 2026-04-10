@@ -187,6 +187,7 @@ export default function OrderPage() {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [expandedDrawingId, setExpandedDrawingId] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
+  const [foremanNameValue, setForemanNameValue] = useState("");
 
   useEffect(() => {
     if (!projectId || !orderId) return;
@@ -204,8 +205,9 @@ export default function OrderPage() {
         ...snapshot.data(),
       };
 
-      setOrder(data);
-      setNotesValue(data.notes || "");
+        setOrder(data);
+        setNotesValue(data.notes || "");
+        setForemanNameValue(data.foremanName || "");
     });
 
     return () => unsubscribe();
@@ -250,11 +252,13 @@ export default function OrderPage() {
     try {
       await updateDoc(doc(db, "projects", projectId, "orders", orderId), {
         notes: notesValue.trim(),
+        foremanName: foremanNameValue.trim(),
       });
 
       setOrder((prev) => ({
         ...prev,
         notes: notesValue.trim(),
+        foremanName: foremanNameValue.trim(),
       }));
 
       setIsEditingNotes(false);
@@ -431,6 +435,11 @@ export default function OrderPage() {
             </p>
 
             <p>
+                <span className="font-semibold">Foreman:</span>{" "}
+                {order.foremanName || "-"}
+            </p>    
+
+            <p>
                 <span className="font-semibold">Items:</span> {items.length}
             </p>
 
@@ -440,6 +449,7 @@ export default function OrderPage() {
         </div>
 
         <div>
+          
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-semibold text-gray-900">Notes for shop</span>
 
@@ -451,27 +461,26 @@ export default function OrderPage() {
                 Edit
               </button>
             ) : (
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <button
-                  onClick={handleSaveNotes}
-                  disabled={isSavingNotes}
-                  className="text-sm text-green-700 font-medium disabled:opacity-50"
+                    onClick={handleSaveNotes}
+                    disabled={isSavingNotes}
+                    className="text-sm text-green-600 font-medium disabled:opacity-50"
                 >
-                  {isSavingNotes ? "Saving..." : "Save"}
+                    {isSavingNotes ? "Saving..." : "Save"}
                 </button>
 
                 <button
-                  onClick={() => {
-                    setShowItemModal(false);
-                    setEditingItemId(null);
-                    setItemType("straight");
-                    setNewItem(createEmptyItem("straight"));
+                    onClick={() => {
+                    setIsEditingNotes(false);
+                    setNotesValue(order?.notes || "");
+                    setForemanNameValue(order?.foremanName || "");
                     }}
-                  className="text-sm text-gray-700 font-medium"
+                    className="text-sm text-gray-700 font-medium"
                 >
-                  Cancel
+                    Cancel
                 </button>
-              </div>
+                </div>
             )}
           </div>
 
@@ -931,7 +940,6 @@ export default function OrderPage() {
 
               <button
                 onClick={() => setShowItemModal(false)}
-                disabled={isSavingItem}
                 className="flex-1 border border-gray-300 bg-white text-gray-900 px-4 py-3 rounded-lg disabled:opacity-50"
               >
                 Cancel

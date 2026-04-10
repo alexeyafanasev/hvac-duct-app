@@ -16,9 +16,13 @@ type Project = {
   id: string;
   name: string;
   date?: string;
+  client?: string;
+  address?: string;
+  startDate?: string;
+  dueDate?: string;
   items?: unknown[];
   notes?: string;
-  status?: "Active" | "In Progress" | "Completed";
+  status?: "Active" | "In Progress" | "Completed" | "Done";
   createdAt?: unknown;
 };
 
@@ -31,6 +35,10 @@ export default function Home() {
   const [projectName, setProjectName] = useState("");
   const [projectDate, setProjectDate] = useState(getTodayDate());
   const [projectNotes, setProjectNotes] = useState("");
+  const [projectClient, setProjectClient] = useState("");
+  const [projectAddress, setProjectAddress] = useState("");
+  const [projectStartDate, setProjectStartDate] = useState("");
+  const [projectDueDate, setProjectDueDate] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -55,18 +63,26 @@ export default function Home() {
     try {
       setIsCreating(true);
 
-      await addDoc(collection(db, "projects"), {
-        name: projectName.trim(),
-        date: projectDate,
-        notes: projectNotes.trim(),
-        status: "Active",
-        items: [],
-        createdAt: serverTimestamp(),
-      });
+    await addDoc(collection(db, "projects"), {
+      name: projectName.trim(),
+      date: projectDate,
+      client: projectClient.trim(),
+      address: projectAddress.trim(),
+      startDate: projectStartDate,
+      dueDate: projectDueDate,
+      notes: projectNotes.trim(),
+      status: "Active",
+      items: [],
+      createdAt: serverTimestamp(),
+    });
 
       setProjectName("");
       setProjectDate(getTodayDate());
       setProjectNotes("");
+      setProjectClient("");
+      setProjectAddress("");
+      setProjectStartDate("");
+      setProjectDueDate("");
       setShowModal(false);
     } catch (error) {
       console.error("Error creating project:", error);
@@ -153,6 +169,57 @@ return (
               className="w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 p-3 rounded-lg"
             />
           </div>
+
+          <div className="mb-3">
+            <label className="block text-sm font-medium mb-1 text-gray-900">
+              Client
+            </label>
+            <input
+              type="text"
+              placeholder="Client name"
+              value={projectClient}
+              onChange={(e) => setProjectClient(e.target.value)}
+              className="w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 p-3 rounded-lg"
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="block text-sm font-medium mb-1 text-gray-900">
+              Address
+            </label>
+            <textarea
+              placeholder="Project address"
+              value={projectAddress}
+              onChange={(e) => setProjectAddress(e.target.value)}
+              className="w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 p-3 rounded-lg min-h-[80px]"
+            />
+          </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-900">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={projectStartDate}
+              onChange={(e) => setProjectStartDate(e.target.value)}
+              className="w-full border border-gray-300 bg-white text-gray-900 p-3 rounded-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-900">
+              Due Date
+            </label>
+            <input
+              type="date"
+              value={projectDueDate}
+              onChange={(e) => setProjectDueDate(e.target.value)}
+              className="w-full border border-gray-300 bg-white text-gray-900 p-3 rounded-lg"
+            />
+          </div>
+        </div>
 
           {/* Notes */}
           <div className="mb-4">
