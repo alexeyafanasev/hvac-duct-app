@@ -13,6 +13,7 @@ import {
 import {
   StraightFlatPattern,
   ElbowFlatPattern,
+  TransitionFlatPattern,
 } from "../../../../../components/FabricationDrawings";
 
 function getTodayDate() {
@@ -140,15 +141,27 @@ function FittingPreview({ item }) {
 
   if (item.type === "transition") {
     return (
-      <TransitionDrawing
-        justification={item.justification}
-        width1={item.width1}
-        height1={item.height1}
-        width2={item.width2}
-        height2={item.height2}
-        length={item.length}
-        className="w-full max-w-sm"
-      />
+        <div className="space-y-3">
+        <TransitionDrawing
+            justification={item.justification}
+            width1={item.width1}
+            height1={item.height1}
+            width2={item.width2}
+            height2={item.height2}
+            length={item.length}
+            className="w-full max-w-sm"
+        />
+
+        <TransitionFlatPattern
+            justification={item.justification}
+            width1={item.width1}
+            height1={item.height1}
+            width2={item.width2}
+            height2={item.height2}
+            length={item.length}
+            className="w-full"
+        />
+        </div>
     );
   }
 
@@ -213,9 +226,6 @@ export default function OrderPage() {
     return () => unsubscribe();
   }, [projectId, orderId]);
 
-  useEffect(() => {
-    setNewItem(createEmptyItem(itemType));
-  }, [itemType]);
 
   const items = useMemo(() => {
     if (!order?.items || !Array.isArray(order.items)) return [];
@@ -337,12 +347,16 @@ export default function OrderPage() {
     }
   };
 
-  const handleEditItem = (item) => {
-    setEditingItemId(item.id);
-    setItemType(item.type);
-    setNewItem(item);
-    setShowItemModal(true);
-  };
+    const handleEditItem = (item) => {
+        setEditingItemId(item.id);
+        setItemType(item.type);
+        setNewItem({
+            ...item,
+            quantity: item.quantity || 1,
+            insulated: !!item.insulated,
+        });
+        setShowItemModal(true);
+    };
 
   const updateNewItemField = (field, value) => {
     setNewItem((prev) => ({
@@ -633,9 +647,13 @@ export default function OrderPage() {
                 </label>
 
                 <select
-                  value={itemType}
-                  onChange={(e) => setItemType(e.target.value)}
-                  className="w-full border border-gray-300 bg-white text-gray-900 p-3 rounded-lg"
+                    value={itemType}
+                    onChange={(e) => {
+                        const nextType = e.target.value;
+                        setItemType(nextType);
+                        setNewItem(createEmptyItem(nextType));
+                    }}
+                    className="w-full border border-gray-300 bg-white text-gray-900 p-3 rounded-lg"
                 >
                   <option value="straight">Straight</option>
                   <option value="elbow">Elbow</option>

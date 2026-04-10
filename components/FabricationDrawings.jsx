@@ -545,3 +545,179 @@ export function ElbowFlatPattern({
     </div>
   );
 }
+
+export function TransitionFlatPattern({
+  justification = "center",
+  width1 = "",
+  height1 = "",
+  width2 = "",
+  height2 = "",
+  length = "",
+  className = "w-full max-w-4xl",
+}) {
+  const w1 = Number(width1) || 0;
+  const h1 = Number(height1) || 0;
+  const w2 = Number(width2) || 0;
+  const h2 = Number(height2) || 0;
+  const l = Number(length) || 0;
+
+  const maxDim = Math.max(w1, h1, w2, h2, l, 1);
+  const scale = Math.min(100 / Math.max(maxDim, 1), 4);
+
+  const inletW = w1 * scale;
+  const inletH = h1 * scale;
+  const outletW = w2 * scale;
+  const outletH = h2 * scale;
+  const bodyL = l * scale;
+
+  const startX = 80;
+  const startY = 90;
+  const gap = 36;
+
+  const panelTopY = startY;
+  const panelBottomY = startY + Math.max(inletH, outletH) + 90;
+
+  const topPanelX = startX;
+  const bottomPanelX = startX;
+  const leftPanelX = startX + Math.max(inletW, outletW) + gap;
+  const rightPanelX = leftPanelX + bodyL + gap;
+
+  const developedTopIn = inletW;
+  const developedTopOut = outletW;
+
+  const developedSideIn = inletH;
+  const developedSideOut = outletH;
+
+  const makeTrapezoid = (x, y, inSize, outSize, depth, label) => {
+    const maxSize = Math.max(inSize, outSize);
+    const minSize = Math.min(inSize, outSize);
+    const offset = (maxSize - minSize) / 2;
+
+    const topWidth = inSize;
+    const bottomWidth = outSize;
+
+    const topX = x + (maxSize - topWidth) / 2;
+    const bottomX = x + (maxSize - bottomWidth) / 2;
+
+    return (
+      <g key={label}>
+        <path
+          d={`
+            M ${topX} ${y}
+            L ${topX + topWidth} ${y}
+            L ${bottomX + bottomWidth} ${y + depth}
+            L ${bottomX} ${y + depth}
+            Z
+          `}
+          fill="#F9FAFB"
+          stroke="#111827"
+          strokeWidth="2"
+        />
+
+        <text
+          x={x + maxSize / 2}
+          y={y - 12}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="600"
+          fill="#111827"
+        >
+          {label}
+        </text>
+
+        <text
+          x={topX + topWidth / 2}
+          y={y - 28}
+          textAnchor="middle"
+          fontSize="12"
+          fill="#B91C1C"
+        >
+          IN = {Math.round(inSize / scale) || "-"}
+        </text>
+
+        <text
+          x={bottomX + bottomWidth / 2}
+          y={y + depth + 18}
+          textAnchor="middle"
+          fontSize="12"
+          fill="#B91C1C"
+        >
+          OUT = {Math.round(outSize / scale) || "-"}
+        </text>
+
+        <text
+          x={x + maxSize + 14}
+          y={y + depth / 2}
+          fontSize="12"
+          fill="#111827"
+        >
+          L = {l || "-"}
+        </text>
+      </g>
+    );
+  };
+
+  return (
+    <div className={className}>
+      <svg
+        viewBox="0 0 980 460"
+        className="w-full h-auto border rounded-xl bg-white"
+      >
+        <text x="30" y="26" fontSize="18" fontWeight="600" fill="#111827">
+          Transition Flat Pattern
+        </text>
+
+        <text x="30" y="54" fontSize="12" fill="#4B5563">
+          Justification = {justification}, IN = {w1 || "-"} × {h1 || "-"}, OUT ={" "}
+          {w2 || "-"} × {h2 || "-"}, L = {l || "-"}
+        </text>
+
+        {makeTrapezoid(
+          topPanelX,
+          panelTopY,
+          developedTopIn,
+          developedTopOut,
+          bodyL,
+          "Top Panel"
+        )}
+
+        {makeTrapezoid(
+          bottomPanelX,
+          panelBottomY,
+          developedTopIn,
+          developedTopOut,
+          bodyL,
+          "Bottom Panel"
+        )}
+
+        {makeTrapezoid(
+          leftPanelX,
+          panelTopY,
+          developedSideIn,
+          developedSideOut,
+          bodyL,
+          "Left Panel"
+        )}
+
+        {makeTrapezoid(
+          rightPanelX,
+          panelTopY,
+          developedSideIn,
+          developedSideOut,
+          bodyL,
+          "Right Panel"
+        )}
+
+        <text x="30" y="398" fontSize="13" fill="#374151">
+          Top / Bottom: {w1 || "-"} → {w2 || "-"}
+        </text>
+        <text x="30" y="416" fontSize="13" fill="#374151">
+          Left / Right: {h1 || "-"} → {h2 || "-"}
+        </text>
+        <text x="30" y="434" fontSize="13" fill="#374151">
+          Length = {l || "-"}
+        </text>
+      </svg>
+    </div>
+  );
+}
