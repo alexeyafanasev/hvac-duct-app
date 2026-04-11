@@ -14,6 +14,7 @@ import {
   StraightFlatPattern,
   ElbowFlatPattern,
   TransitionFlatPattern,
+  OffsetFlatPattern,
 } from "../../../../../components/FabricationDrawings";
 
 function getTodayDate() {
@@ -167,18 +168,63 @@ function FittingPreview({ item }) {
 
   if (item.type === "offset") {
     return (
-      <OffsetDrawing
-        direction={item.direction}
-        width={item.width}
-        height={item.height}
-        length={item.length}
-        offset={item.offset}
-        className="w-full max-w-sm"
-      />
+        <div className="space-y-3">
+        <OffsetDrawing
+            direction={item.direction}
+            width={item.width}
+            height={item.height}
+            length={item.length}
+            offset={item.offset}
+            className="w-full max-w-sm"
+        />
+
+        <OffsetFlatPattern
+            direction={item.direction}
+            width={item.width}
+            height={item.height}
+            length={item.length}
+            offset={item.offset}
+            className="w-full"
+        />
+        </div>
     );
   }
 
   return null;
+}
+
+function validateOffsetDimensions(item) {
+  if (item.type !== "offset") {
+    return { isValid: true, message: "" };
+  }
+
+  const direction = item.direction || "right";
+  const width = Number(item.width) || 0;
+  const height = Number(item.height) || 0;
+  const length = Number(item.length) || 0;
+  const offset = Number(item.offset) || 0;
+
+  if (direction === "right" || direction === "left") {
+    if (length < offset + width) {
+      return {
+        isValid: false,
+        message:
+          "For Offset Right/Left, Length must be greater than or equal to Offset + Width.",
+      };
+    }
+  }
+
+  if (direction === "up" || direction === "down") {
+    if (length < offset + height) {
+      return {
+        isValid: false,
+        message:
+          "For Offset Up/Down, Length must be greater than or equal to Offset + Height.",
+      };
+    }
+  }
+
+  return { isValid: true, message: "" };
 }
 
 export default function OrderPage() {
@@ -292,6 +338,12 @@ export default function OrderPage() {
         }
         : {}),
     };
+  const offsetValidation = validateOffsetDimensions(preparedItem);
+
+  if (!offsetValidation.isValid) {
+    alert(offsetValidation.message);
+    return;
+  }
 
   setIsSavingItem(true);
 
@@ -938,6 +990,13 @@ export default function OrderPage() {
                     <option value="up">Up</option>
                     <option value="down">Down</option>
                   </select>
+                </div>
+                <div className="sm:col-span-3">
+                    <p className="text-sm text-amber-700">
+                        {newItem.direction === "right" || newItem.direction === "left"
+                        ? "Rule: Length must be ≥ Offset + Width"
+                        : "Rule: Length must be ≥ Offset + Height"}
+                    </p>
                 </div>
               </div>
             )}

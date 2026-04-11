@@ -1,3 +1,44 @@
+function toInchesFraction(value) {
+  const num = Number(value);
+
+  if (!Number.isFinite(num)) return "-";
+
+  const sign = num < 0 ? "-" : "";
+  const absValue = Math.abs(num);
+
+  let inches = Math.floor(absValue);
+  const fraction = absValue - inches;
+
+  const denominator = 16;
+  let numerator = Math.round(fraction * denominator);
+
+  if (numerator === denominator) {
+    inches += 1;
+    numerator = 0;
+  }
+
+  if (numerator === 0) {
+    return `${sign}${inches}"`;
+  }
+
+  function gcd(a, b) {
+    a = Math.abs(Math.trunc(a));
+    b = Math.abs(Math.trunc(b));
+
+    while (b !== 0) {
+      const temp = b;
+      b = a % b;
+      a = temp;
+    }
+
+    return a || 1;
+  }
+
+  const divisor = gcd(numerator, denominator);
+
+  return `${sign}${inches} ${numerator / divisor}/${denominator / divisor}"`;
+}
+
 export function StraightFlatPattern({
   width = "",
   height = "",
@@ -102,7 +143,7 @@ export function StraightFlatPattern({
           fontWeight="700"
           fill="#B91C1C"
         >
-          {w || "-"}
+          {toInchesFraction(w) || "-"}
         </text>
 
         <text
@@ -113,7 +154,7 @@ export function StraightFlatPattern({
           fontWeight="700"
           fill="#B91C1C"
         >
-          {h || "-"}
+          {toInchesFraction(h) || "-"}
         </text>
 
         <text
@@ -124,7 +165,7 @@ export function StraightFlatPattern({
           fontWeight="700"
           fill="#B91C1C"
         >
-          {w || "-"}
+          {toInchesFraction(w) || "-"}
         </text>
 
         <text
@@ -135,7 +176,7 @@ export function StraightFlatPattern({
           fontWeight="700"
           fill="#B91C1C"
         >
-          {h || "-"}
+          {toInchesFraction(h) || "-"}
         </text>
 
         {/* top dimension line for developed width */}
@@ -170,7 +211,7 @@ export function StraightFlatPattern({
           fontSize="14"
           fill="#111827"
         >
-          Developed Width = {realFlatWidth || "-"}
+          Developed Width = {toInchesFraction(realFlatWidth) || "-"}
         </text>
 
         {/* right vertical dimension for length */}
@@ -207,7 +248,7 @@ export function StraightFlatPattern({
           fontWeight="600"
           fill="#111827"
         >
-          Length = {l || "-"}
+          Length = {toInchesFraction(l) || "-"}
         </text>
 
         {/* fold labels */}
@@ -241,7 +282,7 @@ export function StraightFlatPattern({
 
         {/* summary */}
         <text x="40" y="360" fontSize="13" fill="#374151">
-          W = {w || "-"}, H = {h || "-"}, L = {l || "-"}
+          W = {toInchesFraction(w) || "-"}, H = {toInchesFraction(h) || "-"}, L = {toInchesFraction(l) || "-"}
         </text>
       </svg>
     </div>
@@ -347,7 +388,7 @@ export function ElbowFlatPattern({
         </text>
 
         <text x="30" y="64" fontSize="12" fill="#4B5563">
-          Angle = {a}°, Radius = {r}, Width = {w}, Height = {h}, Bend Type ={" "}
+          Angle = {a}°, Radius = {toInchesFraction(r)}, Width = {toInchesFraction(w)}, Height = {toInchesFraction(h)}, Bend Type ={" "}
           {bendType === "long" ? "Long Way" : "Short Way"}
         </text>
 
@@ -378,7 +419,7 @@ export function ElbowFlatPattern({
           fontSize="13"
           fill="#B91C1C"
         >
-          Outer R = {(r + turningSize) || "-"}
+          Outer R = {toInchesFraction(r + turningSize) || "-"}
         </text>
 
         <text
@@ -387,7 +428,7 @@ export function ElbowFlatPattern({
           fontSize="13"
           fill="#B91C1C"
         >
-          Inner R = {r || "-"}
+          Inner R = {toInchesFraction(r) || "-"}
         </text>
 
         <text
@@ -405,7 +446,7 @@ export function ElbowFlatPattern({
           fontSize="13"
           fill="#111827"
         >
-          Turning Size = {turningSize || "-"}
+          Turning Size = {toInchesFraction(turningSize) || "-"}
         </text>
 
         {/* ===== Curved piece 2 ===== */}
@@ -435,7 +476,7 @@ export function ElbowFlatPattern({
           fontSize="13"
           fill="#B91C1C"
         >
-          Outer R = {(r + turningSize) || "-"}
+          Outer R = {toInchesFraction(r + turningSize) || "-"}
         </text>
 
         <text
@@ -444,7 +485,7 @@ export function ElbowFlatPattern({
           fontSize="13"
           fill="#B91C1C"
         >
-          Inner R = {r || "-"}
+          Inner R = {toInchesFraction(r) || "-"}
         </text>
 
         <text
@@ -462,7 +503,7 @@ export function ElbowFlatPattern({
           fontSize="13"
           fill="#111827"
         >
-          Turning Size = {turningSize || "-"}
+          Turning Size = {toInchesFraction(turningSize) || "-"}
         </text>
 
         {/* ===== Inner rectangle ===== */}
@@ -495,7 +536,7 @@ export function ElbowFlatPattern({
           fontWeight="700"
           fill="#B91C1C"
         >
-          {innerArc ? innerArc.toFixed(2) : "-"} × {h || "-"}
+          {innerArc ? toInchesFraction(innerArc) : "-"} × {toInchesFraction(h) || "-"}
         </text>
 
         {/* ===== Outer rectangle ===== */}
@@ -528,18 +569,18 @@ export function ElbowFlatPattern({
           fontWeight="700"
           fill="#B91C1C"
         >
-          {outerArc ? outerArc.toFixed(2) : "-"} × {h || "-"}
+          {outerArc ? toInchesFraction(outerArc) : "-"} × {toInchesFraction(h) || "-"}
         </text>
 
         {/* Summary */}
         <text x="30" y="380" fontSize="13" fill="#374151">
-          Inner Arc = {innerArc ? innerArc.toFixed(2) : "-"}
+          Inner Arc = {innerArc ? toInchesFraction(innerArc) : "-"}
         </text>
         <text x="30" y="398" fontSize="13" fill="#374151">
-          Outer Arc = {outerArc ? outerArc.toFixed(2) : "-"}
+          Outer Arc = {outerArc ? toInchesFraction(outerArc) : "-"}
         </text>
         <text x="30" y="416" fontSize="13" fill="#374151">
-          Fixed Side = {fixedSide || "-"}
+          Fixed Side = {toInchesFraction(fixedSide) || "-"}
         </text>
       </svg>
     </div>
@@ -563,6 +604,33 @@ export function TransitionFlatPattern({
 
   const dW = w1 - w2;
   const dH = h1 - h2;
+
+  function getPanelBounds(panel) {
+    const xs = [panel.p1.x, panel.p2.x, panel.p3.x, panel.p4.x];
+    const ys = [panel.p1.y, panel.p2.y, panel.p3.y, panel.p4.y];
+
+    return {
+        minX: Math.min(...xs),
+        maxX: Math.max(...xs),
+        minY: Math.min(...ys),
+        maxY: Math.max(...ys),
+    };
+  }
+
+  function getCombinedBounds(panels) {
+    const bounds = panels.map(getPanelBounds);
+
+    return {
+        minX: Math.min(...bounds.map((b) => b.minX)),
+        maxX: Math.max(...bounds.map((b) => b.maxX)),
+        minY: Math.min(...bounds.map((b) => b.minY)),
+        maxY: Math.max(...bounds.map((b) => b.maxY)),
+    };
+  }
+
+    const canvasWidth = 1100;
+    const canvasHeight = 560;
+    const padding = 40;
 
   function getOffsets(just) {
     switch (just) {
@@ -704,7 +772,7 @@ export function TransitionFlatPattern({
     buildTruePanel(h1, h2, rightTop, rightBottom)
   );
 
-  function getPanelBounds(panel) {
+  function getPanelSize(panel) {
     const xs = [panel.p1.x, panel.p2.x, panel.p3.x, panel.p4.x];
     const ys = [panel.p1.y, panel.p2.y, panel.p3.y, panel.p4.y];
 
@@ -714,10 +782,10 @@ export function TransitionFlatPattern({
     };
   }
 
-  const topBounds = getPanelBounds(topPanelRaw);
-  const bottomBounds = getPanelBounds(bottomPanelRaw);
-  const leftBounds = getPanelBounds(leftPanelRaw);
-  const rightBounds = getPanelBounds(rightPanelRaw);
+    const topBounds = getPanelSize(topPanelRaw);
+    const bottomBounds = getPanelSize(bottomPanelRaw);
+    const leftBounds = getPanelSize(leftPanelRaw);
+    const rightBounds = getPanelSize(rightPanelRaw);
 
   const maxPanelWidth = Math.max(
     topBounds.width,
@@ -734,8 +802,8 @@ export function TransitionFlatPattern({
     1
   );
 
-  const targetPanelWidth = 250;
-  const targetPanelHeight = 150;
+  const targetPanelWidth = 300;
+  const targetPanelHeight = 200;
 
   const scale = Math.min(
     targetPanelWidth / maxPanelWidth,
@@ -752,7 +820,7 @@ export function TransitionFlatPattern({
     };
   }
 
-  const startX = 450;
+  const startX = 40;
   const startY = 110;
   const gapX = 70;
   const gapY = 90;
@@ -774,6 +842,54 @@ export function TransitionFlatPattern({
     startY + maxPanelHeight * scale + gapY
   );
 
+  const combinedBounds = getCombinedBounds([
+  topPanel,
+  leftPanel,
+  rightPanel,
+  bottomPanel,
+]);
+
+    const contentWidth = combinedBounds.maxX - combinedBounds.minX;
+    const contentHeight = combinedBounds.maxY - combinedBounds.minY;
+
+    const drawingOffsetX = 400;
+    const drawingOffsetY = 90;
+    const rightPadding = 40;
+    const bottomPadding = 40;
+
+    const fitScale = Math.min(
+      (canvasWidth - drawingOffsetX - rightPadding) / Math.max(contentWidth, 1),
+      (canvasHeight - drawingOffsetY - bottomPadding) / Math.max(contentHeight, 1),
+      1
+    );
+
+
+  function fitPanelToCanvas(panel) {
+    return {
+        ...panel,
+        p1: {
+        x: (panel.p1.x - combinedBounds.minX) * fitScale + drawingOffsetX,
+        y: (panel.p1.y - combinedBounds.minY) * fitScale + drawingOffsetY,
+        },
+        p2: {
+        x: (panel.p2.x - combinedBounds.minX) * fitScale + drawingOffsetX,
+        y: (panel.p2.y - combinedBounds.minY) * fitScale + drawingOffsetY,
+        },
+        p3: {
+        x: (panel.p3.x - combinedBounds.minX) * fitScale + drawingOffsetX,
+        y: (panel.p3.y - combinedBounds.minY) * fitScale + drawingOffsetY,
+        },
+        p4: {
+        x: (panel.p4.x - combinedBounds.minX) * fitScale + drawingOffsetX,
+        y: (panel.p4.y - combinedBounds.minY) * fitScale + drawingOffsetY,
+        },
+    };
+  }
+
+  const fittedTopPanel = fitPanelToCanvas(topPanel);
+  const fittedLeftPanel = fitPanelToCanvas(leftPanel);
+  const fittedRightPanel = fitPanelToCanvas(rightPanel);
+  const fittedBottomPanel = fitPanelToCanvas(bottomPanel);
 
   function panelPath(panel) {
     return `
@@ -783,10 +899,6 @@ export function TransitionFlatPattern({
       L ${panel.p4.x} ${panel.p4.y}
       Z
     `;
-  }
-
-  function formatNum(value) {
-    return Number.isFinite(value) ? value.toFixed(1) : "-";
   }
 
   function renderPanel(panel, label, color = "#F9FAFB") {
@@ -832,7 +944,7 @@ export function TransitionFlatPattern({
           fontSize="12"
           fill="#B91C1C"
         >
-          {formatNum(panel.lengths.top)}
+          {toInchesFraction(panel.lengths.top)}
         </text>
 
         <text
@@ -842,27 +954,27 @@ export function TransitionFlatPattern({
           fontSize="12"
           fill="#B91C1C"
         >
-          {formatNum(panel.lengths.bottom)}
+          {toInchesFraction(panel.lengths.bottom)}
         </text>
 
         <text
           x={leftMidX - 10}
-          y={leftMidY}
+          y={leftMidY + 7}
           textAnchor="end"
           fontSize="12"
           fill="#1F2937"
         >
-          {formatNum(panel.lengths.left)}
+          {toInchesFraction(panel.lengths.left)}
         </text>
 
         <text
           x={rightMidX + 10}
-          y={rightMidY}
+          y={rightMidY - 7}
           textAnchor="start"
           fontSize="12"
           fill="#1F2937"
         >
-          {formatNum(panel.lengths.right)}
+          {toInchesFraction(panel.lengths.right)}
         </text>
       </g>
     );
@@ -905,37 +1017,499 @@ export function TransitionFlatPattern({
           {offsetText()}
         </text>
 
-        {renderPanel(topPanel, "Top Panel", "#F9FAFB")}
-        {renderPanel(leftPanel, "Left Panel", "#F9FAFB")}
-        {renderPanel(rightPanel, "Right Panel", "#F9FAFB")}
-        {renderPanel(bottomPanel, "Bottom Panel", "#F3F4F6")}
+    {renderPanel(fittedTopPanel, "Top Panel", "#F9FAFB")}
+    {renderPanel(fittedLeftPanel, "Left Panel", "#F9FAFB")}
+    {renderPanel(fittedRightPanel, "Right Panel", "#F9FAFB")}
+    {renderPanel(fittedBottomPanel, "Bottom Panel", "#F3F4F6")}
 
         <text x="30" y="470" fontSize="13" fill="#374151">
-          Top Panel: top {formatNum(topPanelRaw.lengths.top)}, bottom{" "}
-          {formatNum(topPanelRaw.lengths.bottom)}, left{" "}
-          {formatNum(topPanelRaw.lengths.left)}, right{" "}
-          {formatNum(topPanelRaw.lengths.right)}
+          Top Panel: top {toInchesFraction(topPanelRaw.lengths.top)}, bottom{" "}
+          {toInchesFraction(topPanelRaw.lengths.bottom)}, left{" "}
+          {toInchesFraction(topPanelRaw.lengths.left)}, right{" "}
+          {toInchesFraction(topPanelRaw.lengths.right)}
         </text>
 
         <text x="30" y="490" fontSize="13" fill="#374151">
-          Bottom Panel: top {formatNum(bottomPanelRaw.lengths.top)}, bottom{" "}
-          {formatNum(bottomPanelRaw.lengths.bottom)}, left{" "}
-          {formatNum(bottomPanelRaw.lengths.left)}, right{" "}
-          {formatNum(bottomPanelRaw.lengths.right)}
+          Bottom Panel: top {toInchesFraction(bottomPanelRaw.lengths.top)}, bottom{" "}
+          {toInchesFraction(bottomPanelRaw.lengths.bottom)}, left{" "}
+          {toInchesFraction(bottomPanelRaw.lengths.left)}, right{" "}
+          {toInchesFraction(bottomPanelRaw.lengths.right)}
         </text>
 
         <text x="30" y="510" fontSize="13" fill="#374151">
-          Left Panel: top {formatNum(leftPanelRaw.lengths.top)}, bottom{" "}
-          {formatNum(leftPanelRaw.lengths.bottom)}, left{" "}
-          {formatNum(leftPanelRaw.lengths.left)}, right{" "}
-          {formatNum(leftPanelRaw.lengths.right)}
+          Left Panel: top {toInchesFraction(leftPanelRaw.lengths.top)}, bottom{" "}
+          {toInchesFraction(leftPanelRaw.lengths.bottom)}, left{" "}
+          {toInchesFraction(leftPanelRaw.lengths.left)}, right{" "}
+          {toInchesFraction(leftPanelRaw.lengths.right)}
         </text>
 
         <text x="30" y="530" fontSize="13" fill="#374151">
-          Right Panel: top {formatNum(rightPanelRaw.lengths.top)}, bottom{" "}
-          {formatNum(rightPanelRaw.lengths.bottom)}, left{" "}
-          {formatNum(rightPanelRaw.lengths.left)}, right{" "}
-          {formatNum(rightPanelRaw.lengths.right)}
+          Right Panel: top {toInchesFraction(rightPanelRaw.lengths.top)}, bottom{" "}
+          {toInchesFraction(rightPanelRaw.lengths.bottom)}, left{" "}
+          {toInchesFraction(rightPanelRaw.lengths.left)}, right{" "}
+          {toInchesFraction(rightPanelRaw.lengths.right)}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+export function OffsetFlatPattern({
+  direction = "right",
+  width = "",
+  height = "",
+  length = "",
+  offset = "",
+  className = "w-full max-w-4xl",
+}) {
+  const w = Number(width) || 0;
+  const h = Number(height) || 0;
+  const l = Number(length) || 0;
+  const o = Number(offset) || 0;
+
+  const trueLength = (4 * Math.sqrt(l ** 2 + o ** 2) - l) / 3 ;
+
+  const maxPanelWidth = 260;
+  const maxPanelHeight = 140;
+
+  const scale = Math.min(
+    maxPanelWidth / Math.max(w, h, 1),
+    maxPanelHeight / Math.max(trueLength, 1)
+  );
+
+  const drawW = w * scale;
+  const drawH = h * scale;
+  const drawL = l * scale;
+  const drawO = Math.abs(o) * scale;
+
+  const startX = 450;
+  const startY = 110;
+  const gapX = 70;
+  const gapY = 90;
+
+  function rectPanel(x, y, panelWidth, panelHeight, label, realWidth, realHeight, fill) {
+    return (
+      <g key={label}>
+        <rect
+          x={x}
+          y={y}
+          width={panelWidth}
+          height={panelHeight}
+          fill={fill}
+          stroke="#111827"
+          strokeWidth="2"
+        />
+
+        <text
+          x={x + panelWidth / 2}
+          y={y - 12}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="600"
+          fill="#111827"
+        >
+          {label}
+        </text>
+
+        <text
+          x={x + panelWidth / 2}
+          y={y - 28}
+          textAnchor="middle"
+          fontSize="12"
+          fill="#B91C1C"
+        >
+          {toInchesFraction(realWidth)}
+        </text>
+
+        <text
+          x={x + panelWidth + 12}
+          y={y + panelHeight / 2}
+          fontSize="12"
+          fill="#1F2937"
+        >
+          {toInchesFraction(realHeight)}
+        </text>
+      </g>
+    );
+  }
+
+  function drawExtensionPoint(p1, p2, distanceInInches, scale) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+
+    const length = Math.sqrt(dx * dx + dy * dy);
+    if (length === 0) return null;
+
+    const ux = dx / length;
+    const uy = dy / length;
+
+    const midX = (p1.x + p2.x) / 2;
+    const midY = (p1.y + p2.y) / 2;
+
+    const dist = distanceInInches;
+
+    const pointX = midX + ux * dist;
+    const pointY = midY + uy * dist;
+
+    return { x: pointX, y: pointY };
+  }
+
+  // Vertical S-panel:
+  // top width = bottom width = panelWidth
+  // left and right edges are S-curves
+  function verticalSCurvePanel(x, y, panelWidth, panelHeight, shift, label, realWidth, realHeight, fill) {
+    const c1 = panelHeight * 0.4;
+    const c2 = panelHeight * 0.6;
+
+    const p1 = { x: x, y: y };
+    const p2 = { x: x + panelWidth, y: y };
+    const p3 = { x: x - shift, y: y + panelHeight };
+    const p4 = { x: x - shift + panelWidth, y: y + panelHeight };
+    const rp = (shift**2 + (l*scale)**2)/(4*shift);
+
+    const extensionPoint1 = drawExtensionPoint(p1, p2, -rp, scale);
+    const extensionPoint2 = drawExtensionPoint(p3, p4, rp, scale);
+
+    const path = `
+      M ${x} ${y}
+      L ${x + panelWidth} ${y}
+      C ${x + panelWidth + 0.1*shift} ${y + c1},
+        ${x + panelWidth - 1.1*shift} ${y + c2},
+        ${x + panelWidth - shift} ${y + panelHeight}
+      L ${x - shift} ${y + panelHeight}
+      C ${x - 1.1*shift} ${y + c2},
+        ${x + 0.1*shift} ${y + c1},
+        ${x} ${y}
+      Z
+    `;
+
+    return (
+      <g key={label}>
+        <path d={path} fill={fill} stroke="#111827" strokeWidth="2" />
+        
+        {extensionPoint1 && (
+            <circle
+                cx={extensionPoint1.x}
+                cy={extensionPoint1.y}
+                r={3}
+                fill="blue"
+            />
+        )}
+
+        {extensionPoint2 && (
+            <circle
+                cx={extensionPoint2.x}
+                cy={extensionPoint2.y}
+                r={3}
+                fill="blue"
+            />
+        )}
+
+        <line
+            x1={extensionPoint1.x}
+            y1={extensionPoint1.y}
+            x2={extensionPoint2.x}
+            y2={extensionPoint2.y}
+            stroke="red"
+            strokeWidth="2"
+        />
+
+        <text
+          x={x - 100}
+          y={y + 50}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="400"
+          fill="#111827"
+        >
+            <tspan x={x - 100} dy="0">Radius point {toInchesFraction(Math.abs(rp)/scale)}</tspan>
+            <tspan x={x - 100} dy="1.2em">from the center line</tspan>
+        </text>
+
+        <text
+          x={x + panelWidth / 2}
+          y={y - 12}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="600"
+          fill="#111827"
+        >
+          {label}
+        </text>
+
+        <text
+          x={x + panelWidth / 2}
+          y={y - 28}
+          textAnchor="middle"
+          fontSize="12"
+          fill="#B91C1C"
+        >
+          {toInchesFraction(realWidth)}
+        </text>
+
+        <text
+          x={x + panelWidth + Math.abs(shift) + 12}
+          y={y + panelHeight / 2}
+          fontSize="12"
+          fill="#1F2937"
+        >
+          {toInchesFraction(realHeight)}
+        </text>
+      </g>
+    );
+  }
+
+  // Horizontal S-panel:
+  // left height = right height = panelHeight
+  // top and bottom edges are S-curves
+  function horizontalSCurvePanel(x, y, panelWidth, panelHeight, shift, label, realWidth, realHeight, fill) {
+    const c1 = panelWidth * 0.4;
+    const c2 = panelWidth * 0.6;
+
+    const p1 = { x: x, y: y };
+    const p2 = { x: x + panelWidth, y: y };
+    const p3 = { x: x - shift, y: y + panelHeight };
+    const p4 = { x: x - shift + panelWidth, y: y + panelHeight };
+    const rp = (shift**2 + (l*scale)**2)/(4*shift);
+
+    const extensionPoint1 = {x:x + panelWidth, y: y + panelHeight/2 - shift + rp};
+    const extensionPoint2 = {x:x , y: y + panelHeight/2 - rp};
+
+    const path = `
+      M ${x} ${y}
+      C ${x + c1} ${y + 0.1*shift},
+        ${x + c2} ${y - 1.1*shift},
+        ${x + panelWidth} ${y - shift}
+      L ${x + panelWidth} ${y + panelHeight - shift}
+      C ${x + c2} ${y + panelHeight - 1.1*shift},
+        ${x + c1} ${y + panelHeight + 0.1*shift},
+        ${x} ${y + panelHeight}
+      Z
+    `;
+
+    return (
+      <g key={label}>
+        <path d={path} fill={fill} stroke="#111827" strokeWidth="2" />
+        
+        {extensionPoint1 && (
+            <circle
+                cx={extensionPoint1.x}
+                cy={extensionPoint1.y}
+                r={3}
+                fill="blue"
+            />
+        )}
+
+        {extensionPoint2 && (
+            <circle
+                cx={extensionPoint2.x}
+                cy={extensionPoint2.y}
+                r={3}
+                fill="blue"
+            />
+        )}
+
+        <line
+            x1={extensionPoint1.x}
+            y1={extensionPoint1.y}
+            x2={extensionPoint2.x}
+            y2={extensionPoint2.y}
+            stroke="red"
+            strokeWidth="2"
+        />
+
+        <text
+          x={x + 250}
+          y={y + 50}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="400"
+          fill="#111827"
+        >
+            <tspan x={x + 250} dy="0">Radius point {toInchesFraction(Math.abs(rp)/scale)}</tspan>
+            <tspan x={x + 250} dy="1.2em">from the center line</tspan>
+        </text>
+
+        <text
+          x={x + panelWidth / 2}
+          y={y - signedShift/3 - 35}
+          textAnchor="middle"
+          fontSize="14"
+          fontWeight="600"
+          fill="#111827"
+        >
+          {label}
+        </text>
+
+        <text
+          x={x + panelWidth / 2}
+          y={y - signedShift/3 - 50}
+          textAnchor="middle"
+          fontSize="12"
+          fill="#B91C1C"
+        >
+          {toInchesFraction(realWidth)}
+        </text>
+
+        <text
+          x={x - 30}
+          y={y + panelHeight / 2}
+          fontSize="12"
+          fill="#1F2937"
+        >
+          {toInchesFraction(realHeight)}
+        </text>
+      </g>
+    );
+  }
+
+  const signedShift =
+    direction === "left" || direction === "up" ? -drawO  : drawO ;
+
+  const isHorizontalOffset = direction === "right" || direction === "left";
+
+  const topX = startX;
+  const topY = startY;
+
+  const bottomX = startX;
+  const bottomY = startY + drawL + gapY;
+
+  const leftX = startX + drawW + gapX + Math.abs(signedShift);
+  const leftY = startY ;
+
+  const rightX = leftX;
+  const rightY = bottomY ;
+
+  return (
+    <div className={className}>
+      <svg
+        viewBox="0 0 1100 540"
+        className="w-full h-auto border rounded-xl bg-white"
+      >
+        <text x="30" y="26" fontSize="18" fontWeight="600" fill="#111827">
+          Offset Flat Pattern
+        </text>
+
+        <text x="30" y="52" fontSize="12" fill="#4B5563">
+          Direction = {direction}, W = {toInchesFraction(w)}, H = {toInchesFraction(h)}, L = {toInchesFraction(l)}, Offset = {toInchesFraction(o)}
+        </text>
+
+        <text x="30" y="70" fontSize="12" fill="#4B5563">
+          True Length = {toInchesFraction(trueLength)}
+        </text>
+
+        {isHorizontalOffset ? (
+          <>
+            {verticalSCurvePanel(
+              topX,
+              topY,
+              drawW,
+              drawL,
+              signedShift,
+              "Top Panel",
+              w,
+              trueLength,
+              "#F9FAFB"
+            )}
+
+            {verticalSCurvePanel(
+              bottomX,
+              bottomY,
+              drawW,
+              drawL,
+              signedShift,
+              "Bottom Panel",
+              w,
+              trueLength,
+              "#F3F4F6"
+            )}
+
+            {rectPanel(
+              leftX,
+              leftY,
+              drawH,
+              drawL,
+              "Left Panel",
+              h,
+              trueLength,
+              "#F9FAFB"
+            )}
+
+            {rectPanel(
+              rightX,
+              rightY,
+              drawH,
+              drawL,
+              "Right Panel",
+              h,
+              trueLength,
+              "#F3F4F6"
+            )}
+          </>
+        ) : (
+          <>
+            {rectPanel(
+              topX,
+              topY,
+              drawW,
+              drawL,
+              "Top Panel",
+              w,
+              trueLength,
+              "#F9FAFB"
+            )}
+
+            {rectPanel(
+              bottomX,
+              bottomY,
+              drawW,
+              drawL,
+              "Bottom Panel",
+              w,
+              trueLength,
+              "#F3F4F6"
+            )}
+
+            {horizontalSCurvePanel(
+              leftX,
+              leftY+ signedShift/3,
+              drawL,
+              drawH,
+              signedShift,
+              "Left Panel",
+              trueLength,
+              h,
+              "#F9FAFB"
+            )}
+
+            {horizontalSCurvePanel(
+              rightX,
+              rightY,
+              drawL,
+              drawH,
+              signedShift,
+              "Right Panel",
+              trueLength,
+              h,
+              "#F3F4F6"
+            )}
+          </>
+        )}
+
+        <text x="30" y="470" fontSize="13" fill="#374151">
+          True Length = {toInchesFraction(trueLength)}
+        </text>
+
+        <text x="30" y="490" fontSize="13" fill="#374151">
+          {isHorizontalOffset
+            ? `Top / Bottom = ${toInchesFraction(w)} × ${toInchesFraction(trueLength)}`
+            : `Top / Bottom = ${toInchesFraction(w)} × ${toInchesFraction(trueLength)}`}
+        </text>
+
+        <text x="30" y="510" fontSize="13" fill="#374151">
+          {isHorizontalOffset
+            ? `Left / Right = ${toInchesFraction(h)} × ${toInchesFraction(trueLength)}`
+            : `Left / Right = ${toInchesFraction(h)} × ${toInchesFraction(trueLength)}`}
         </text>
       </svg>
     </div>
