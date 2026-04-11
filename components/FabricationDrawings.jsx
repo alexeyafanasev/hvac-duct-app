@@ -559,64 +559,264 @@ export function TransitionFlatPattern({
   const h1 = Number(height1) || 0;
   const w2 = Number(width2) || 0;
   const h2 = Number(height2) || 0;
-  const l = Number(length) || 0;
+  const L = Number(length) || 0;
 
-  const maxDim = Math.max(w1, h1, w2, h2, l, 1);
-  const scale = Math.min(100 / Math.max(maxDim, 1), 4);
+  const dW = w1 - w2;
+  const dH = h1 - h2;
 
-  const inletW = w1 * scale;
-  const inletH = h1 * scale;
-  const outletW = w2 * scale;
-  const outletH = h2 * scale;
-  const bodyL = l * scale;
+  function getOffsets(just) {
+    switch (just) {
+      case "left":
+        return { dx: -dW / 2, dy: 0 };
+      case "right":
+        return { dx: dW / 2, dy: 0 };
+      case "top":
+        return { dx: 0, dy: -dH / 2 };
+      case "bottom":
+        return { dx: 0, dy: dH / 2 };
+      case "top-left":
+        return { dx: -dW / 2, dy: -dH / 2 };
+      case "top-right":
+        return { dx: dW / 2, dy: -dH / 2 };
+      case "bottom-left":
+        return { dx: -dW / 2, dy: dH / 2 };
+      case "bottom-right":
+        return { dx: dW / 2, dy: dH / 2 };
+      case "center":
+      default:
+        return { dx: 0, dy: 0 };
+    }
+  }
 
-  const startX = 80;
-  const startY = 90;
-  const gap = 36;
+  const { dx, dy } = getOffsets(justification);
 
-  const panelTopY = startY;
-  const panelBottomY = startY + Math.max(inletH, outletH) + 90;
+  function trueLength(x, y) {
+    return Math.sqrt(L ** 2 + x ** 2 + y ** 2);
+  }
 
-  const topPanelX = startX;
-  const bottomPanelX = startX;
-  const leftPanelX = startX + Math.max(inletW, outletW) + gap;
-  const rightPanelX = leftPanelX + bodyL + gap;
+  // True slant lengths from 3D geometry
 
-  const developedTopIn = inletW;
-  const developedTopOut = outletW;
+    // Top edge difference
+    const topEdgeOffset = dy + dH / 2;
 
-  const developedSideIn = inletH;
-  const developedSideOut = outletH;
+    // Bottom edge difference
+    const bottomEdgeOffset = dy - dH / 2;
 
-  const makeTrapezoid = (x, y, inSize, outSize, depth, label) => {
-    const maxSize = Math.max(inSize, outSize);
-    const minSize = Math.min(inSize, outSize);
-    const offset = (maxSize - minSize) / 2;
+    // Left edge difference
+    const leftEdgeOffset = dx + dW / 2;
 
-    const topWidth = inSize;
-    const bottomWidth = outSize;
+    // Right edge difference
+    const rightEdgeOffset = dx - dW / 2;
 
-    const topX = x + (maxSize - topWidth) / 2;
-    const bottomX = x + (maxSize - bottomWidth) / 2;
+    // Top panel
+    const topLeft = trueLength(leftEdgeOffset, topEdgeOffset);
+    const topRight = trueLength(rightEdgeOffset, topEdgeOffset);
+
+    // Bottom panel
+    const bottomLeft = trueLength(leftEdgeOffset, bottomEdgeOffset);
+    const bottomRight = trueLength(rightEdgeOffset, bottomEdgeOffset);
+
+    // Left panel
+    const leftTop = trueLength(leftEdgeOffset, topEdgeOffset);
+    const leftBottom = trueLength(leftEdgeOffset, bottomEdgeOffset);
+
+    // Right panel
+    const rightTop = trueLength(rightEdgeOffset, topEdgeOffset);
+    const rightBottom = trueLength(rightEdgeOffset, bottomEdgeOffset);
+
+    function buildTruePanel(top, bottom, left, right) {
+        const p1 = { x: 0, y: 0 };
+        const p2 = { x: top, y: 0 };
+
+        if (top <= 0 || bottom <= 0) {
+        return {
+            p1,
+            p2,
+            p3: { x: top, y: 0 },
+            p4: { x: 0, y: 0 },
+            lengths: { top, right, bottom, left },
+            rawHeight: 0,
+        };
+        }
+
+    // Symmetric case: equal side lengths -> centered trapezoid
+    if (Math.abs(left - right) < 0.0001) {
+      const inset = (top - bottom) / 2;
+      const h = Math.sqrt(Math.max(left ** 2 - inset ** 2, 0));
+
+      return {
+        p1,
+        p2,
+        p3: { x: inset + bottom, y: h },
+        p4: { x: inset, y: h },
+        lengths: { top, right, bottom, left },
+        rawHeight: h,
+      };
+    }
+
+    // General case:
+    // p1=(0,0), p2=(top,0), p4=(x,h), p3=(x+bottom,h)
+    // |p1-p4| = left
+    // |p2-p3| = right
+    const denom = 2 * (top - bottom);
+
+    let x;
+    if (Math.abs(denom) < 0.0001) {
+      // If top ~= bottom, solve as near-parallelogram but keep bases horizontal
+      x = (left ** 2 - right ** 2) / (4 * top || 0.0001);
+    } else {
+      x = (left ** 2 - right ** 2 + (top - bottom) ** 2) / denom;
+    }
+
+    const h = Math.sqrt(Math.max(left ** 2 - x ** 2, 0));
+
+    return {
+      p1,
+      p2,
+      p3: { x: x + bottom, y: h },
+      p4: { x: x, y: h },
+      lengths: { top, right, bottom, left },
+      rawHeight: h,
+    };
+  }
+
+  function normalizePanel(panel) {
+    const minX = Math.min(panel.p1.x, panel.p2.x, panel.p3.x, panel.p4.x);
+    const minY = Math.min(panel.p1.y, panel.p2.y, panel.p3.y, panel.p4.y);
+
+    return {
+      ...panel,
+      p1: { x: panel.p1.x - minX, y: panel.p1.y - minY },
+      p2: { x: panel.p2.x - minX, y: panel.p2.y - minY },
+      p3: { x: panel.p3.x - minX, y: panel.p3.y - minY },
+      p4: { x: panel.p4.x - minX, y: panel.p4.y - minY },
+    };
+  }
+
+  const topPanelRaw = normalizePanel(buildTruePanel(w1, w2, topLeft, topRight));
+  const bottomPanelRaw = normalizePanel(
+    buildTruePanel(w1, w2, bottomLeft, bottomRight)
+  );
+  const leftPanelRaw = normalizePanel(
+    buildTruePanel(h1, h2, leftTop, leftBottom)
+  );
+  const rightPanelRaw = normalizePanel(
+    buildTruePanel(h1, h2, rightTop, rightBottom)
+  );
+
+  function getPanelBounds(panel) {
+    const xs = [panel.p1.x, panel.p2.x, panel.p3.x, panel.p4.x];
+    const ys = [panel.p1.y, panel.p2.y, panel.p3.y, panel.p4.y];
+
+    return {
+      width: Math.max(...xs) - Math.min(...xs),
+      height: Math.max(...ys) - Math.min(...ys),
+    };
+  }
+
+  const topBounds = getPanelBounds(topPanelRaw);
+  const bottomBounds = getPanelBounds(bottomPanelRaw);
+  const leftBounds = getPanelBounds(leftPanelRaw);
+  const rightBounds = getPanelBounds(rightPanelRaw);
+
+  const maxPanelWidth = Math.max(
+    topBounds.width,
+    bottomBounds.width,
+    leftBounds.width,
+    rightBounds.width,
+    1
+  );
+  const maxPanelHeight = Math.max(
+    topBounds.height,
+    bottomBounds.height,
+    leftBounds.height,
+    rightBounds.height,
+    1
+  );
+
+  const targetPanelWidth = 250;
+  const targetPanelHeight = 150;
+
+  const scale = Math.min(
+    targetPanelWidth / maxPanelWidth,
+    targetPanelHeight / maxPanelHeight
+  );
+
+  function scaleAndPlacePanel(panel, offsetX, offsetY) {
+    return {
+      ...panel,
+      p1: { x: panel.p1.x * scale + offsetX, y: panel.p1.y * scale + offsetY },
+      p2: { x: panel.p2.x * scale + offsetX, y: panel.p2.y * scale + offsetY },
+      p3: { x: panel.p3.x * scale + offsetX, y: panel.p3.y * scale + offsetY },
+      p4: { x: panel.p4.x * scale + offsetX, y: panel.p4.y * scale + offsetY },
+    };
+  }
+
+  const startX = 450;
+  const startY = 110;
+  const gapX = 70;
+  const gapY = 90;
+
+  const topPanel = scaleAndPlacePanel(topPanelRaw, startX, startY);
+  const bottomPanel = scaleAndPlacePanel(
+    bottomPanelRaw,
+    startX ,
+    startY + maxPanelHeight * scale + gapY
+  );
+  const leftPanel = scaleAndPlacePanel(
+    leftPanelRaw,
+    startX + maxPanelWidth * scale + gapX,
+    startY
+  );
+  const rightPanel = scaleAndPlacePanel(
+    rightPanelRaw,
+    startX + maxPanelWidth * scale + gapX,
+    startY + maxPanelHeight * scale + gapY
+  );
+
+
+  function panelPath(panel) {
+    return `
+      M ${panel.p1.x} ${panel.p1.y}
+      L ${panel.p2.x} ${panel.p2.y}
+      L ${panel.p3.x} ${panel.p3.y}
+      L ${panel.p4.x} ${panel.p4.y}
+      Z
+    `;
+  }
+
+  function formatNum(value) {
+    return Number.isFinite(value) ? value.toFixed(1) : "-";
+  }
+
+  function renderPanel(panel, label, color = "#F9FAFB") {
+    const topMidX = (panel.p1.x + panel.p2.x) / 2;
+    const topMidY = (panel.p1.y + panel.p2.y) / 2;
+
+    const bottomMidX = (panel.p3.x + panel.p4.x) / 2;
+    const bottomMidY = (panel.p3.y + panel.p4.y) / 2;
+
+    const leftMidX = (panel.p1.x + panel.p4.x) / 2;
+    const leftMidY = (panel.p1.y + panel.p4.y) / 2;
+
+    const rightMidX = (panel.p2.x + panel.p3.x) / 2;
+    const rightMidY = (panel.p2.y + panel.p3.y) / 2;
+
+    const labelX = (panel.p1.x + panel.p2.x) / 2;
+    const labelY = Math.min(panel.p1.y, panel.p2.y) - 14;
 
     return (
       <g key={label}>
         <path
-          d={`
-            M ${topX} ${y}
-            L ${topX + topWidth} ${y}
-            L ${bottomX + bottomWidth} ${y + depth}
-            L ${bottomX} ${y + depth}
-            Z
-          `}
-          fill="#F9FAFB"
+          d={panelPath(panel)}
+          fill={color}
           stroke="#111827"
           strokeWidth="2"
         />
 
         <text
-          x={x + maxSize / 2}
-          y={y - 12}
+          x={labelX}
+          y={labelY - 10}
           textAnchor="middle"
           fontSize="14"
           fontWeight="600"
@@ -626,96 +826,116 @@ export function TransitionFlatPattern({
         </text>
 
         <text
-          x={topX + topWidth / 2}
-          y={y - 28}
+          x={topMidX}
+          y={topMidY - 8}
           textAnchor="middle"
           fontSize="12"
           fill="#B91C1C"
         >
-          IN = {Math.round(inSize / scale) || "-"}
+          {formatNum(panel.lengths.top)}
         </text>
 
         <text
-          x={bottomX + bottomWidth / 2}
-          y={y + depth + 18}
+          x={bottomMidX}
+          y={bottomMidY + 18}
           textAnchor="middle"
           fontSize="12"
           fill="#B91C1C"
         >
-          OUT = {Math.round(outSize / scale) || "-"}
+          {formatNum(panel.lengths.bottom)}
         </text>
 
         <text
-          x={x + maxSize + 14}
-          y={y + depth / 2}
+          x={leftMidX - 10}
+          y={leftMidY}
+          textAnchor="end"
           fontSize="12"
-          fill="#111827"
+          fill="#1F2937"
         >
-          L = {l || "-"}
+          {formatNum(panel.lengths.left)}
+        </text>
+
+        <text
+          x={rightMidX + 10}
+          y={rightMidY}
+          textAnchor="start"
+          fontSize="12"
+          fill="#1F2937"
+        >
+          {formatNum(panel.lengths.right)}
         </text>
       </g>
     );
-  };
+  }
+
+  function offsetText() {
+    const horizontal =
+      dx === 0
+        ? "centered"
+        : dx < 0
+        ? `left ${Math.abs(dx).toFixed(1)}`
+        : `right ${Math.abs(dx).toFixed(1)}`;
+
+    const vertical =
+      dy === 0
+        ? "centered"
+        : dy < 0
+        ? `up ${Math.abs(dy).toFixed(1)}`
+        : `down ${Math.abs(dy).toFixed(1)}`;
+
+    return `Width offset: ${horizontal}, Height offset: ${vertical}`;
+  }
 
   return (
     <div className={className}>
       <svg
-        viewBox="0 0 980 460"
+        viewBox="0 0 1100 560"
         className="w-full h-auto border rounded-xl bg-white"
       >
         <text x="30" y="26" fontSize="18" fontWeight="600" fill="#111827">
           Transition Flat Pattern
         </text>
 
-        <text x="30" y="54" fontSize="12" fill="#4B5563">
+        <text x="30" y="52" fontSize="12" fill="#4B5563">
           Justification = {justification}, IN = {w1 || "-"} × {h1 || "-"}, OUT ={" "}
-          {w2 || "-"} × {h2 || "-"}, L = {l || "-"}
+          {w2 || "-"} × {h2 || "-"}, L = {L || "-"}
         </text>
 
-        {makeTrapezoid(
-          topPanelX,
-          panelTopY,
-          developedTopIn,
-          developedTopOut,
-          bodyL,
-          "Top Panel"
-        )}
-
-        {makeTrapezoid(
-          bottomPanelX,
-          panelBottomY,
-          developedTopIn,
-          developedTopOut,
-          bodyL,
-          "Bottom Panel"
-        )}
-
-        {makeTrapezoid(
-          leftPanelX,
-          panelTopY,
-          developedSideIn,
-          developedSideOut,
-          bodyL,
-          "Left Panel"
-        )}
-
-        {makeTrapezoid(
-          rightPanelX,
-          panelTopY,
-          developedSideIn,
-          developedSideOut,
-          bodyL,
-          "Right Panel"
-        )}
-
-        <text x="30" y="398" fontSize="13" fill="#374151">
-          Top / Bottom: {w1 || "-"} → {w2 || "-"}
+        <text x="30" y="70" fontSize="12" fill="#4B5563">
+          {offsetText()}
         </text>
-        <text x="30" y="416" fontSize="13" fill="#374151">
-          Left / Right: {h1 || "-"} → {h2 || "-"}
+
+        {renderPanel(topPanel, "Top Panel", "#F9FAFB")}
+        {renderPanel(leftPanel, "Left Panel", "#F9FAFB")}
+        {renderPanel(rightPanel, "Right Panel", "#F9FAFB")}
+        {renderPanel(bottomPanel, "Bottom Panel", "#F3F4F6")}
+
+        <text x="30" y="470" fontSize="13" fill="#374151">
+          Top Panel: top {formatNum(topPanelRaw.lengths.top)}, bottom{" "}
+          {formatNum(topPanelRaw.lengths.bottom)}, left{" "}
+          {formatNum(topPanelRaw.lengths.left)}, right{" "}
+          {formatNum(topPanelRaw.lengths.right)}
         </text>
-        <text x="30" y="434" fontSize="13" fill="#374151">
-          Length = {l || "-"}
+
+        <text x="30" y="490" fontSize="13" fill="#374151">
+          Bottom Panel: top {formatNum(bottomPanelRaw.lengths.top)}, bottom{" "}
+          {formatNum(bottomPanelRaw.lengths.bottom)}, left{" "}
+          {formatNum(bottomPanelRaw.lengths.left)}, right{" "}
+          {formatNum(bottomPanelRaw.lengths.right)}
+        </text>
+
+        <text x="30" y="510" fontSize="13" fill="#374151">
+          Left Panel: top {formatNum(leftPanelRaw.lengths.top)}, bottom{" "}
+          {formatNum(leftPanelRaw.lengths.bottom)}, left{" "}
+          {formatNum(leftPanelRaw.lengths.left)}, right{" "}
+          {formatNum(leftPanelRaw.lengths.right)}
+        </text>
+
+        <text x="30" y="530" fontSize="13" fill="#374151">
+          Right Panel: top {formatNum(rightPanelRaw.lengths.top)}, bottom{" "}
+          {formatNum(rightPanelRaw.lengths.bottom)}, left{" "}
+          {formatNum(rightPanelRaw.lengths.left)}, right{" "}
+          {formatNum(rightPanelRaw.lengths.right)}
         </text>
       </svg>
     </div>
