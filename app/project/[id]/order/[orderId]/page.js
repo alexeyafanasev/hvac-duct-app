@@ -589,8 +589,17 @@ const handleSaveOrderPdf = async () => {
     try {
       const dataUrl = await renderDrawingToPng(item);
 
-      const imgWidth = pageWidth - margin * 2;
-      const imgHeight = 70;
+      const img = new Image();
+      img.src = dataUrl;
+
+      await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      });
+
+    const imgWidth = pageWidth - margin * 2;
+    const ratio = img.height / img.width;
+    const imgHeight = imgWidth * ratio;
 
       if (currentY + imgHeight > pageHeight - 10) {
         pdf.addPage();
