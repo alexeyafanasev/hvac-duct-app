@@ -16,6 +16,10 @@ import {
   TransitionFlatPattern,
   OffsetFlatPattern,
 } from "../../../../../components/FabricationDrawings";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as htmlToImage from "html-to-image";
+import { createRoot } from "react-dom/client";
 
 function getTodayDate() {
   return new Date().toISOString().split("T")[0];
@@ -227,6 +231,96 @@ function validateOffsetDimensions(item) {
   return { isValid: true, message: "" };
 }
 
+function FabricationDrawingForPdf({ item }) {
+  if (item.type === "straight") {
+    return (
+      <StraightFlatPattern
+        width={item.width}
+        height={item.height}
+        length={item.length}
+        className="w-[900px]"
+      />
+    );
+  }
+
+  if (item.type === "elbow") {
+    return (
+      <ElbowFlatPattern
+        width={item.width}
+        height={item.height}
+        radius={item.radius}
+        angle={item.angle}
+        bendType={item.bendType}
+        className="w-[900px]"
+      />
+    );
+  }
+
+  if (item.type === "transition") {
+    return (
+      <TransitionFlatPattern
+        justification={item.justification}
+        width1={item.width1}
+        height1={item.height1}
+        width2={item.width2}
+        height2={item.height2}
+        length={item.length}
+        className="w-[900px]"
+      />
+    );
+  }
+
+  if (item.type === "offset") {
+    return (
+      <OffsetFlatPattern
+        direction={item.direction}
+        width={item.width}
+        height={item.height}
+        length={item.length}
+        offset={item.offset}
+        className="w-[900px]"
+      />
+    );
+  }
+
+  return <div>Unsupported drawing</div>;
+}
+
+async function renderDrawingToPng(item) {
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-10000px";
+  container.style.top = "0";
+  container.style.width = "950px";
+  container.style.background = "white";
+  container.style.padding = "16px";
+  container.style.zIndex = "-1";
+  document.body.appendChild(container);
+
+  const root = createRoot(container);
+  root.render(<FabricationDrawingForPdf item={item} />);
+
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  const svgNode = container.querySelector("svg");
+  if (!svgNode) {
+    root.unmount();
+    document.body.removeChild(container);
+    throw new Error("SVG not found in rendered drawing.");
+  }
+
+  const dataUrl = await htmlToImage.toPng(svgNode, {
+    cacheBust: true,
+    pixelRatio: 2,
+    backgroundColor: "#ffffff",
+  });
+
+  root.unmount();
+  document.body.removeChild(container);
+
+  return dataUrl;
+}
+
 export default function OrderPage() {
   const params = useParams();
   const router = useRouter();
@@ -431,6 +525,129 @@ export default function OrderPage() {
     );
   }
 
+const handleSaveOrderPdf = async () => {
+  if (!order) return;
+
+  const pdf = new jsPDF("p", "mm", "a4");
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 14;
+
+  pdf.setFontSize(18);
+  pdf.text(order.name || "Order", margin, 18);
+
+  pdf.setFontSize(11);
+  pdf.text(`Date: ${order.date || "-"}`, margin, 28);
+  pdf.text(`Foreman: ${order.foremanName || "-"}`, margin, 35);
+  pdf.text(`Status: ${order.status || "Active"}`, margin, 42);
+
+  const notesText = pdf.splitTextToSize(`Notes: ${order.notes || "-"}`, 180);
+  pdf.text(notesText, margin, 52);
+
+  let currentY = 52 + notesText.length * 6 + 6;
+
+  autoTable(pdf, {
+    startY: currentY,
+    head: [["Item", "Type", "Qty", "Insulated", "Details"]],
+    body: items.map((item, index) => [
+      `${index + 1}. ${item.name || item.type || "-"}`,
+      item.type || "-",
+      String(item.quantity || 1),
+      item.insulated ? "Yes" : "No",
+      item.type === "straight"
+        ? `W:${item.width || "-"} H:${item.height || "-"} L:${item.length || "-"}`
+        : item.type === "elbow"
+        ? `W:${item.width || "-"} H:${item.height || "-"} R:${item.radius || "-"} A:${item.angle || "-"}`
+        : item.type === "transition"
+        ? `IN:${item.width1 || "-"}x${item.height1 || "-"} OUT:${item.width2 || "-"}x${item.height2 || "-"} L:${item.length || "-"}`
+        : item.type === "offset"
+        ? `W:${item.width || "-"} H:${item.height || "-"} L:${item.length || "-"} O:${item.offset || "-"} Dir:${item.direction || "-"}`
+        : "-",
+    ]),
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [37, 99, 235] },
+  });
+
+  currentY = (pdf.lastAutoTable?.finalY || currentY) + 8;
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    if (currentY > pageHeight - 90) {
+      pdf.addPage();
+      currentY = 20;
+    }
+
+    pdf.setFontSize(12);
+    pdf.text(
+      `${i + 1}. ${item.name || item.type || "Item"} Drawing`,
+      margin,
+      currentY
+    );
+    currentY += 4;
+
+    try {
+      const dataUrl = await renderDrawingToPng(item);
+
+      const imgWidth = pageWidth - margin * 2;
+      const imgHeight = 70;
+
+      if (currentY + imgHeight > pageHeight - 10) {
+        pdf.addPage();
+        currentY = 20;
+      }
+
+      pdf.addImage(dataUrl, "PNG", margin, currentY, imgWidth, imgHeight);
+      currentY += imgHeight + 10;
+    } catch (error) {
+      console.error("Failed to render drawing for PDF:", error);
+      pdf.setFontSize(10);
+      pdf.text("Drawing could not be rendered.", margin, currentY + 8);
+      currentY += 16;
+    }
+  }
+
+  pdf.save(`${(order.name || "order").replace(/\s+/g, "_")}.pdf`);
+};
+
+const handleSendOrderEmail = () => {
+  if (!order) return;
+
+  const subject = encodeURIComponent(`Order: ${order.name || "Order"}`);
+
+  const body = encodeURIComponent(
+    [
+      `Order: ${order.name || "-"}`,
+      `Date: ${order.date || "-"}`,
+      `Foreman: ${order.foremanName || "-"}`,
+      `Status: ${order.status || "Active"}`,
+      "",
+      `Notes:`,
+      `${order.notes || "-"}`,
+      "",
+      `Items:`,
+      ...items.map((item, index) => {
+        const details =
+          item.type === "straight"
+            ? `W:${item.width || "-"} H:${item.height || "-"} L:${item.length || "-"}`
+            : item.type === "elbow"
+            ? `W:${item.width || "-"} H:${item.height || "-"} R:${item.radius || "-"} A:${item.angle || "-"}`
+            : item.type === "transition"
+            ? `IN:${item.width1 || "-"}x${item.height1 || "-"} OUT:${item.width2 || "-"}x${item.height2 || "-"} L:${item.length || "-"}`
+            : item.type === "offset"
+            ? `W:${item.width || "-"} H:${item.height || "-"} L:${item.length || "-"} O:${item.offset || "-"} Dir:${item.direction || "-"}`
+            : "-";
+
+        return `${index + 1}. ${item.name || item.type || "-"} | Qty: ${
+          item.quantity || 1
+        } | ${item.insulated ? "Insulated" : "Not insulated"} | ${details}`;
+      }),
+    ].join("\n")
+  );
+
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+};
+
   return (
         <main className="w-full max-w-screen-sm mx-auto px-4 py-4 bg-white text-gray-900 min-h-screen">      <button
         onClick={() => router.push(`/project/${projectId}`)}
@@ -444,6 +661,24 @@ export default function OrderPage() {
           <h1 className="text-3xl font-bold text-gray-900">{order.name}</h1>
         </div>
       </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6">
+        <div className="flex gap-2 flex-wrap">
+            <button
+            onClick={handleSaveOrderPdf}
+            className="text-sm border border-gray-300 bg-white text-gray-900 px-3 py-2 rounded-lg whitespace-nowrap"
+            >
+            Save PDF
+            </button>
+
+            <button
+            onClick={handleSendOrderEmail}
+            className="text-sm border border-gray-300 bg-white text-gray-900 px-3 py-2 rounded-lg whitespace-nowrap"
+            >
+            Send by Email
+            </button>
+        </div>
+        </div>
 
       <div className="mb-6 rounded-xl border border-gray-300 bg-white p-4 space-y-4">
         <div className="relative">

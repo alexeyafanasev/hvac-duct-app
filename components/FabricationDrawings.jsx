@@ -306,7 +306,7 @@ export function ElbowFlatPattern({
 
   // Short Way: поворот по ширине
   // Long Way: поворот по высоте
-  const turningSize = bendType === "long" ? h : w;
+  const turningSize = w;
   const fixedSide = bendType === "long" ? w : h;
 
   const innerArc = 2 * r;
@@ -419,7 +419,7 @@ export function ElbowFlatPattern({
           fontSize="13"
           fill="#B91C1C"
         >
-          Outer R = {toInchesFraction(r + turningSize) || "-"}
+         Outer R = {toInchesFraction(r + turningSize) || "-"}
         </text>
 
         <text

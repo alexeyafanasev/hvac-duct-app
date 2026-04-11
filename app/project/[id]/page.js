@@ -15,6 +15,8 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 function getStatusClasses(status) {
   if (status === "Done" || status === "Completed") {
@@ -64,6 +66,79 @@ export default function ProjectPage() {
   const [projectStartDateValue, setProjectStartDateValue] = useState("");
   const [projectDueDateValue, setProjectDueDateValue] = useState("");
 
+  const handleSavePdf = () => {
+    if (!project) return;
+
+    const docPdf = new jsPDF();
+
+    docPdf.setFontSize(18);
+    docPdf.text(project.name || "Project", 14, 18);
+
+    docPdf.setFontSize(11);
+    docPdf.text(`Date: ${project.date || "-"}`, 14, 28);
+    docPdf.text(`Client: ${project.client || "-"}`, 14, 35);
+    docPdf.text(`Address: ${project.address || "-"}`, 14, 42);
+    docPdf.text(`Start Date: ${project.startDate || "-"}`, 14, 49);
+    docPdf.text(`Due Date: ${project.dueDate || "-"}`, 14, 56);
+
+    const notes = project.notes || "-";
+    const splitNotes = docPdf.splitTextToSize(`Notes: ${notes}`, 180);
+    docPdf.text(splitNotes, 14, 66);
+
+    const tableStartY = 66 + splitNotes.length * 6 + 8;
+
+    autoTable(docPdf, {
+        startY: tableStartY,
+        head: [["Order", "Date", "Foreman", "Status", "Items"]],
+        body: orders.map((order) => [
+        order.name || "-",
+        order.date || "-",
+        order.foremanName || "-",
+        order.status === "Completed" ? "Done" : order.status || "Active",
+        Array.isArray(order.items) ? String(order.items.length) : "0",
+        ]),
+        styles: {
+        fontSize: 10,
+        },
+        headStyles: {
+        fillColor: [41, 128, 185],
+        },
+    });
+
+    docPdf.save(`${(project.name || "project").replace(/\s+/g, "_")}.pdf`);
+  };
+
+  const handleSendEmail = () => {
+    if (!project) return;
+
+    const subject = encodeURIComponent(`Project: ${project.name || "Project"}`);
+
+    const body = encodeURIComponent(
+        [
+        `Project: ${project.name || "-"}`,
+        `Date: ${project.date || "-"}`,
+        `Client: ${project.client || "-"}`,
+        `Address: ${project.address || "-"}`,
+        `Start Date: ${project.startDate || "-"}`,
+        `Due Date: ${project.dueDate || "-"}`,
+        ``,
+        `Notes:`,
+        `${project.notes || "-"}`,
+        ``,
+        `Orders:`,
+        ...orders.map(
+            (order, index) =>
+            `${index + 1}. ${order.name || "-"} | Date: ${order.date || "-"} | Foreman: ${
+                order.foremanName || "-"
+            } | Status: ${
+                order.status === "Completed" ? "Done" : order.status || "Active"
+            } | Items: ${Array.isArray(order.items) ? order.items.length : 0}`
+        ),
+        ].join("\n")
+    );
+
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
 
   useEffect(() => {
     if (!params.id) return;
