@@ -833,3 +833,39 @@ export function TransitionDrawing({
     </div>
   );
 }
+
+export function EndCupDrawing({
+  width = "",
+  height = "",
+  className = "w-full max-w-sm",
+}) {
+  const w = Number(width) || 0;
+  const h = Number(height) || 0;
+
+  return (
+    <div className={className}>
+      <svg
+        viewBox="0 0 220 220"
+        className="w-full h-auto border rounded-xl bg-white"
+      >
+        <rect
+          x="40"
+          y="40"
+          width="140"
+          height="140"
+          fill="#F9FAFB"
+          stroke="#111827"
+          strokeWidth="2"
+        />
+
+        <text x="110" y="30" textAnchor="middle" fontSize="14">
+          End Cup
+        </text>
+
+        <text x="110" y="200" textAnchor="middle" fontSize="12">
+          {w} × {h}
+        </text>
+      </svg>
+    </div>
+  );
+}

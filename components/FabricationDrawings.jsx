@@ -1205,14 +1205,16 @@ export function OffsetFlatPattern({
             />
         )}
 
-        <line
-            x1={extensionPoint1.x}
-            y1={extensionPoint1.y}
-            x2={extensionPoint2.x}
-            y2={extensionPoint2.y}
-            stroke="red"
-            strokeWidth="2"
-        />
+        {extensionPoint1 && extensionPoint2 && (
+            <line
+                x1={extensionPoint1.x}
+                y1={extensionPoint1.y}
+                x2={extensionPoint2.x}
+                y2={extensionPoint2.y}
+                stroke="red"
+                strokeWidth="2"
+            />
+        )}
 
         <text
           x={x - 100}
@@ -1308,15 +1310,17 @@ export function OffsetFlatPattern({
                 fill="blue"
             />
         )}
-
-        <line
-            x1={extensionPoint1.x}
-            y1={extensionPoint1.y}
-            x2={extensionPoint2.x}
-            y2={extensionPoint2.y}
-            stroke="red"
-            strokeWidth="2"
-        />
+        
+        {extensionPoint1 && extensionPoint2 && (
+            <line
+                x1={extensionPoint1.x}
+                y1={extensionPoint1.y}
+                x2={extensionPoint2.x}
+                y2={extensionPoint2.y}
+                stroke="red"
+                strokeWidth="2"
+            />
+        )}
 
         <text
           x={x + 250}
@@ -1510,6 +1514,46 @@ export function OffsetFlatPattern({
           {isHorizontalOffset
             ? `Left / Right = ${toInchesFraction(h)} × ${toInchesFraction(trueLength)}`
             : `Left / Right = ${toInchesFraction(h)} × ${toInchesFraction(trueLength)}`}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+export function EndCupFlatPattern({
+  width = "",
+  height = "",
+  className = "w-full max-w-sm",
+}) {
+  const w = Number(width) || 0;
+  const h = Number(height) || 0;
+
+  return (
+    <div className={className}>
+      <svg
+        viewBox="0 0 400 300"
+        className="w-full h-auto border rounded-xl bg-white"
+      >
+        <text x="20" y="20" fontSize="16">
+          End Cup Flat Pattern
+        </text>
+
+        <rect
+          x="80"
+          y="60"
+          width="200"
+          height="150"
+          fill="#F9FAFB"
+          stroke="#111827"
+          strokeWidth="2"
+        />
+
+        <text x="180" y="50" textAnchor="middle" fontSize="12">
+          {w}
+        </text>
+
+        <text x="290" y="140" fontSize="12">
+          {h}
         </text>
       </svg>
     </div>

@@ -610,6 +610,7 @@ export default function ProjectPage() {
                             <p className="text-gray-700 text-sm">
                             Items: {order.items ? order.items.length : 0}
                             </p>
+
                         </div>
 
                         <span

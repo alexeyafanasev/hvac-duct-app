@@ -3,18 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "../../../../../lib/firebase";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
 import {
   OffsetDrawing,
   ElbowDrawing,
   TransitionDrawing,
   StraightDrawing,
+  EndCupDrawing,
 } from "../../../../../components/FittingDrawings";
 import {
   StraightFlatPattern,
   ElbowFlatPattern,
   TransitionFlatPattern,
   OffsetFlatPattern,
+  EndCupFlatPattern,
 } from "../../../../../components/FabricationDrawings";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -194,6 +196,22 @@ function FittingPreview({ item }) {
     );
   }
 
+    if (item.type === "endcup") {
+        return (
+            <div className="space-y-3">
+            <EndCupDrawing
+                width={item.width}
+                height={item.height}
+            />
+
+            <EndCupFlatPattern
+                width={item.width}
+                height={item.height}
+            />
+            </div>
+        );
+    }
+
   return null;
 }
 
@@ -325,10 +343,12 @@ export default function OrderPage() {
   const params = useParams();
   const router = useRouter();
 
-  const projectId = params.id;
-  const orderId = params.orderId;
+  const projectId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
 
   const [order, setOrder] = useState(null);
+  const [isLoadingOrder, setIsLoadingOrder] = useState(true);
+  const [orderNotFound, setOrderNotFound] = useState(false);
   const [notesValue, setNotesValue] = useState("");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -342,29 +362,82 @@ export default function OrderPage() {
   const [editingItemId, setEditingItemId] = useState(null);
   const [foremanNameValue, setForemanNameValue] = useState("");
 
-  useEffect(() => {
-    if (!projectId || !orderId) return;
+useEffect(() => {
+  if (!projectId || !orderId) {
+    console.log("Missing params", { projectId, orderId });
+    setIsLoadingOrder(false);
+    setOrderNotFound(true);
+    return;
+  }
 
-    const orderRef = doc(db, "projects", projectId, "orders", orderId);
+  let isMounted = true;
 
-    const unsubscribe = onSnapshot(orderRef, (snapshot) => {
-      if (!snapshot.exists()) {
+  const run = async () => {
+    try {
+      setIsLoadingOrder(true);
+      setOrderNotFound(false);
+
+      console.log("Looking for order:", {
+        projectId,
+        orderId,
+        path: `projects/${projectId}/orders/${orderId}`,
+      });
+
+      const orderRef = doc(db, "projects", projectId, "orders", orderId);
+      const docSnap = await getDoc(orderRef);
+
+      console.log("Direct getDoc exists:", docSnap.exists());
+      console.log("Direct getDoc data:", docSnap.exists() ? docSnap.data() : null);
+
+      const ordersRef = collection(db, "projects", projectId, "orders");
+      const listSnap = await getDocs(ordersRef);
+
+      console.log(
+        "Orders in collection:",
+        listSnap.docs.map((d) => ({ id: d.id, data: d.data() }))
+      );
+
+      const found = listSnap.docs.find((d) => d.id === orderId);
+
+      if (!isMounted) return;
+
+      if (!found) {
+        console.log("Order NOT found by id in collection", orderId);
         setOrder(null);
+        setOrderNotFound(true);
+        setIsLoadingOrder(false);
         return;
       }
 
       const data = {
-        id: snapshot.id,
-        ...snapshot.data(),
+        id: found.id,
+        ...found.data(),
       };
 
-        setOrder(data);
-        setNotesValue(data.notes || "");
-        setForemanNameValue(data.foremanName || "");
-    });
+      console.log("Order FOUND:", data);
 
-    return () => unsubscribe();
-  }, [projectId, orderId]);
+      setOrder(data);
+      setNotesValue(data.notes || "");
+      setForemanNameValue(data.foremanName || "");
+      setOrderNotFound(false);
+      setIsLoadingOrder(false);
+    } catch (error) {
+      console.error("Error loading order:", error);
+
+      if (!isMounted) return;
+
+      setOrder(null);
+      setOrderNotFound(true);
+      setIsLoadingOrder(false);
+    }
+  };
+
+  run();
+
+  return () => {
+    isMounted = false;
+  };
+}, [projectId, orderId]);
 
 
   const items = useMemo(() => {
@@ -511,19 +584,35 @@ export default function OrderPage() {
     }));
   };
 
-  if (!order) {
-    return (
-        <main className="w-full max-w-screen-sm mx-auto px-4 py-4 bg-white text-gray-900 min-h-screen">        <button
-          onClick={() => router.push(`/project/${projectId}`)}
-          className="mb-4 text-blue-700 font-medium hover:underline"
-        >
-          ← Back to Project
-        </button>
+if (isLoadingOrder) {
+  return (
+    <main className="w-full max-w-screen-sm mx-auto px-4 py-4 bg-white text-gray-900 min-h-screen">
+      <button
+        onClick={() => router.push(`/project/${projectId}`)}
+        className="mb-4 text-blue-700 font-medium hover:underline"
+      >
+        ← Back to Project
+      </button>
 
-        <p className="text-gray-900">Loading order...</p>
-      </main>
-    );
-  }
+      <p className="text-gray-900">Loading order...</p>
+    </main>
+  );
+}
+
+if (orderNotFound) {
+  return (
+    <main className="w-full max-w-screen-sm mx-auto px-4 py-4 bg-white text-gray-900 min-h-screen">
+      <button
+        onClick={() => router.push(`/project/${projectId}`)}
+        className="mb-4 text-blue-700 font-medium hover:underline"
+      >
+        ← Back to Project
+      </button>
+
+      <p className="text-red-700">Order not found.</p>
+    </main>
+  );
+}
 
 const handleSaveOrderPdf = async () => {
   if (!order) return;
@@ -562,6 +651,8 @@ const handleSaveOrderPdf = async () => {
         ? `IN:${item.width1 || "-"}x${item.height1 || "-"} OUT:${item.width2 || "-"}x${item.height2 || "-"} L:${item.length || "-"}`
         : item.type === "offset"
         ? `W:${item.width || "-"} H:${item.height || "-"} L:${item.length || "-"} O:${item.offset || "-"} Dir:${item.direction || "-"}`
+        : item.type === "endcup"
+        ? `W:${item.width || "-"} H:${item.height || "-"}`
         : "-",
     ]),
     styles: { fontSize: 9 },
@@ -955,6 +1046,7 @@ const handleSendOrderEmail = () => {
                   <option value="elbow">Elbow</option>
                   <option value="transition">Transition</option>
                   <option value="offset">Offset</option>
+                  <option value="endcup">End Cup</option>
                 </select>
               </div>
 
@@ -1243,6 +1335,34 @@ const handleSendOrderEmail = () => {
                     </p>
                 </div>
               </div>
+            )}
+
+            {itemType === "endcup" && (
+            <>
+                <div>
+                <label className="text-sm text-gray-700">Width</label>
+                <input
+                    type="number"
+                    value={newItem.width || ""}
+                    onChange={(e) =>
+                    setNewItem({ ...newItem, width: e.target.value })
+                    }
+                    className="w-full border p-2 rounded-lg"
+                />
+                </div>
+
+                <div>
+                <label className="text-sm text-gray-700">Height</label>
+                <input
+                    type="number"
+                    value={newItem.height || ""}
+                    onChange={(e) =>
+                    setNewItem({ ...newItem, height: e.target.value })
+                    }
+                    className="w-full border p-2 rounded-lg"
+                />
+                </div>
+            </>
             )}
 
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-4">
