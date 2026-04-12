@@ -5,6 +5,7 @@ import Link from "next/link";
 import { db } from "../lib/firebase";
 import {
   collection,
+  getDocs,
   addDoc,
   onSnapshot,
   query,
@@ -22,7 +23,10 @@ type Project = {
   dueDate?: string;
   items?: unknown[];
   notes?: string;
+  ordersCount?: number;
+  itemsCount?: number;
   status?: "Active" | "In Progress" | "Completed" | "Done";
+  archived?: boolean;
   createdAt?: unknown;
 };
 
@@ -40,6 +44,7 @@ export default function Home() {
   const [projectStartDate, setProjectStartDate] = useState("");
   const [projectDueDate, setProjectDueDate] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     const projectsRef = collection(db, "projects");
@@ -57,6 +62,10 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
+  const visibleProjects = projects.filter((project) =>
+    showArchived ? project.archived : !project.archived
+  );
+
   const createProject = async () => {
     if (!projectName.trim()) return;
 
@@ -73,6 +82,9 @@ export default function Home() {
       notes: projectNotes.trim(),
       status: "Active",
       items: [],
+      ordersCount: 0,
+      itemsCount: 0,
+      archived: false,
       createdAt: serverTimestamp(),
     });
 
@@ -94,7 +106,27 @@ export default function Home() {
 
 return (
   <main className="w-full max-w-screen-sm mx-auto px-4 py-4">
+    <div className="flex justify-between items-start w-full mb-6">
     <h1 className="text-3xl font-bold mb-6">HVAC Duct Orders</h1>
+    <div className="flex flex-col items-end gap-1">
+      <span className="text-sm text-gray-700">
+        {showArchived ? "Archived only" : "Active only"}
+      </span>
+
+      <button
+        onClick={() => setShowArchived((prev) => !prev)}
+        className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
+          showArchived ? "bg-blue-600" : "bg-gray-300"
+        }`}
+      >
+        <div
+          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+            showArchived ? "translate-x-6" : "translate-x-0"
+          }`}
+        />
+      </button>
+    </div>
+    </div>
 
     <button
       onClick={() => setShowModal(true)}
@@ -106,8 +138,9 @@ return (
     {projects.length === 0 ? (
       <p className="text-gray-800">No projects yet</p>
     ) : (
+      
       <div className="space-y-3">
-        {projects.map((project) => (
+        {visibleProjects.map((project) => (
           <Link key={project.id} href={`/project/${project.id}`}>
             <div className="border rounded-xl p-4 shadow-sm hover:bg-gray-50 cursor-pointer">
               <h2 className="text-xl font-semibold">{project.name}</h2>
@@ -116,21 +149,13 @@ return (
                 Date: {project?.date || "-"}
               </p>
 
-              <p className="text-gray-500">
-                Items: {project.items ? project.items.length : 0}
+              <p className="text-gray-700 text-sm">
+                Orders: {project.ordersCount ?? 0}
               </p>
 
-              <span
-                className={`text-xs px-3 py-1 rounded-full border ${
-                  project.status === "Completed"
-                    ? "bg-green-100 text-green-700 border-green-200"
-                    : project.status === "In Progress"
-                    ? "bg-yellow-100 text-yellow-700 border-yellow-200"
-                    : "bg-blue-100 text-blue-700 border-blue-200"
-                }`}
-              >
-                {project.status || "Active"}
-              </span>
+              <p className="text-gray-700 text-sm">
+                Total Items: {project.itemsCount ?? 0}
+              </p>
 
             </div>
           </Link>

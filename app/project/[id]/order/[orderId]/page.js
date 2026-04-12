@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "../../../../../lib/firebase";
-import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, updateDoc, increment,} from "firebase/firestore";
 import {
   OffsetDrawing,
   ElbowDrawing,
@@ -89,6 +89,15 @@ function createEmptyItem(type) {
       justification: "center",
     };
   }
+
+  if (type === "endcup") {
+    return {
+        ...base,
+        name: "End Cup",
+        width: "",
+        height: "",
+    };
+    }
 
   return {
     ...base,
@@ -300,6 +309,16 @@ function FabricationDrawingForPdf({ item }) {
       />
     );
   }
+
+  if (item.type === "endcup") {
+    return (
+        <EndCupFlatPattern
+        width={item.width}
+        height={item.height}
+        className="w-[900px]"
+        />
+    );
+    }
 
   return <div>Unsupported drawing</div>;
 }
@@ -529,6 +548,12 @@ useEffect(() => {
       items: nextItems,
     });
 
+    if (!editingItemId) {
+        await updateDoc(doc(db, "projects", projectId), {
+            itemsCount: increment(Number(newItem.quantity) || 0),
+        });
+    }
+
     setOrder((prev) => ({
       ...prev,
       items: nextItems,
@@ -554,6 +579,10 @@ useEffect(() => {
 
       await updateDoc(doc(db, "projects", projectId, "orders", orderId), {
         items: nextItems,
+      });
+
+      await updateDoc(doc(db, "projects", projectId), {
+        itemsCount: increment(-1),
       });
 
       setOrder((prev) => ({
@@ -981,6 +1010,15 @@ const handleSendOrderEmail = () => {
                         <div>Qty: {item.quantity || 1}</div>
                         </>
                     )}
+
+                    {item.type === "endcup" && (
+                        <>
+                            <div>W: {item.width || "-"}</div>
+                            <div>H: {item.height || "-"}</div>
+                            <div>Qty: {item.quantity || 1}</div>
+                        </>
+                        )}
+
                     </div>
                 </div>
 

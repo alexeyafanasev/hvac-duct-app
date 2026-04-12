@@ -14,6 +14,7 @@ import {
   query,
   serverTimestamp,
   updateDoc,
+  increment,
 } from "firebase/firestore";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -66,6 +67,32 @@ export default function ProjectPage() {
   const [projectStartDateValue, setProjectStartDateValue] = useState("");
   const [projectDueDateValue, setProjectDueDateValue] = useState("");
 
+  const handleArchiveProject = async () => {
+    if (!project) return;
+
+    const confirmed = window.confirm(
+        "Archive this project? It will disappear from the main page."
+    );
+
+    if (!confirmed) return;
+
+    try {
+        await updateDoc(doc(db, "projects", project.id), {
+        archived: true,
+        });
+
+        setProject((prev) => ({
+        ...prev,
+        archived: true,
+        }));
+
+        router.push("/");
+    } catch (error) {
+        console.error("Error archiving project:", error);
+        alert("Failed to archive project");
+    }
+    };
+
   const handleSavePdf = () => {
     if (!project) return;
 
@@ -107,6 +134,14 @@ export default function ProjectPage() {
 
     docPdf.save(`${(project.name || "project").replace(/\s+/g, "_")}.pdf`);
   };
+
+  function getTotalQuantity(items) {
+    if (!Array.isArray(items)) return 0;
+
+    return items.reduce((sum, item) => {
+        return sum + (Number(item.quantity) || 0);
+    }, 0);
+    }
 
   const handleSendEmail = () => {
     if (!project) return;
@@ -242,6 +277,10 @@ export default function ProjectPage() {
         createdAt: serverTimestamp(),
     });
 
+    await updateDoc(doc(db, "projects", params.id), {
+        ordersCount: increment(1),
+    });
+
       setOrderName("");
       setOrderDate(new Date().toISOString().split("T")[0]);
       setForemanName("");
@@ -296,6 +335,14 @@ export default function ProjectPage() {
         const handleDeleteOrder = async (orderId) => {
         if (!params.id || !orderId) return;
 
+        const targetOrder = orders.find((o) => o.id === orderId);
+
+        const itemsToRemove = Array.isArray(targetOrder?.items)
+        ? targetOrder.items.reduce((sum, item) => {
+            return sum + (Number(item.quantity) || 0);
+            }, 0)
+        : 0;
+
         const confirmed = window.confirm(
             "Delete this order? This action cannot be undone."
         );
@@ -304,6 +351,11 @@ export default function ProjectPage() {
 
         try {
             await deleteDoc(doc(db, "projects", params.id, "orders", orderId));
+
+            await updateDoc(doc(db, "projects", params.id), {
+            ordersCount: increment(-1),
+            itemsCount: increment(-itemsToRemove),
+            });
 
             if (editingOrderId === orderId) {
             handleCancelEditOrder();
@@ -357,6 +409,8 @@ export default function ProjectPage() {
         >
         Edit Project
         </button>
+        
+        
     ) : (
         <div className="flex gap-2">
         <button
@@ -384,7 +438,15 @@ export default function ProjectPage() {
         </button>
         </div>
     )}
+        <button
+            onClick={handleArchiveProject}
+            className="text-sm border border-red-300 text-red-700 px-3 py-2 rounded-lg whitespace-nowrap"
+        >
+            Archive Project
+        </button>
     </div>
+
+    
 
         <div className="mb-6 rounded-xl border border-gray-300 bg-white p-4 space-y-4 text-gray-900">
         {!isEditingProject ? (
@@ -608,7 +670,7 @@ export default function ProjectPage() {
                             )}
 
                             <p className="text-gray-700 text-sm">
-                            Items: {order.items ? order.items.length : 0}
+                            Total items: {getTotalQuantity(order.items)}
                             </p>
 
                         </div>
