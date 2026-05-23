@@ -22,6 +22,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as htmlToImage from "html-to-image";
 import { createRoot } from "react-dom/client";
+import AuthGuard from "@/components/AuthGuard";
 
 function getTodayDate() {
   return new Date().toISOString().split("T")[0];
@@ -778,6 +779,7 @@ const handleSendOrderEmail = () => {
 };
 
   return (
+    <AuthGuard>
         <main className="w-full max-w-screen-sm mx-auto px-4 py-4 bg-white text-gray-900 min-h-screen">      <button
         onClick={() => router.push(`/project/${projectId}`)}
         className="mb-4 text-blue-700 font-medium hover:underline"
@@ -1428,5 +1430,6 @@ const handleSendOrderEmail = () => {
         </div>
       )}
     </main>
+    </AuthGuard>
   );
 }

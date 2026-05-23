@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import AuthGuard from "@/components/AuthGuard";
 
 function getStatusClasses(status) {
   if (status === "Done" || status === "Completed") {
@@ -382,6 +383,7 @@ export default function ProjectPage() {
   }
 
   return (
+    <AuthGuard>
     <main className="w-full max-w-screen-sm mx-auto px-4 py-4 bg-white text-gray-900 min-h-screen">
       <button
         onClick={() => router.push("/")}
@@ -788,5 +790,6 @@ export default function ProjectPage() {
         </div>
       )}
     </main>
+    </AuthGuard>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { db } from "../lib/firebase";
+import { db, auth } from "../lib/firebase";
 import {
   collection,
   getDocs,
@@ -12,6 +12,9 @@ import {
   orderBy,
   serverTimestamp,
 } from "firebase/firestore";
+import AuthGuard from "@/components/AuthGuard";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+
 
 type Project = {
   id: string;
@@ -105,9 +108,16 @@ export default function Home() {
   };
 
 return (
+  <AuthGuard>
   <main className="w-full max-w-screen-sm mx-auto px-4 py-4">
     <div className="flex justify-between items-start w-full mb-6">
     <h1 className="text-3xl font-bold mb-6">HVAC Duct Orders</h1>
+    <button
+      onClick={() => signOut(auth)}
+      className="mb-4 border px-3 py-2 rounded-lg text-sm"
+    >
+      Log out
+    </button>
     <div className="flex flex-col items-end gap-1">
       <span className="text-sm text-gray-700">
         {showArchived ? "Archived only" : "Active only"}
@@ -280,5 +290,6 @@ return (
       </div>
     )}
   </main>
+  </AuthGuard>
   );
 }

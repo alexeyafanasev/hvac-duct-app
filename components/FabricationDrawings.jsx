@@ -52,8 +52,8 @@ export function StraightFlatPattern({
   const realFlatWidth = w * 2 + h * 2;
   const realFlatHeight = l;
 
-  const maxDrawWidth = 700;
-  const maxDrawHeight = 300;
+  const maxDrawWidth = 500;
+  const maxDrawHeight = 290;
 
   const scale = Math.min(
     maxDrawWidth / (realFlatWidth || 1),
@@ -68,8 +68,8 @@ export function StraightFlatPattern({
   const panel3 = w * scale;
   const panel4 = h * scale;
 
-  const x0 = 40;
-  const y0 = 60;
+  const x0 = 240;
+  const y0 = 70;
 
   const x1 = x0 + panel1;
   const x2 = x1 + panel2;
@@ -1310,7 +1310,7 @@ export function OffsetFlatPattern({
                 fill="blue"
             />
         )}
-        
+
         {extensionPoint1 && extensionPoint2 && (
             <line
                 x1={extensionPoint1.x}
