@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { db } from "../../../../../lib/firebase";
 import { collection, doc, getDoc, getDocs, updateDoc, increment,} from "firebase/firestore";
 import {
@@ -808,6 +809,13 @@ const handleSendOrderEmail = () => {
             >
             Send by Email
             </button>
+
+            <Link
+              href={`/project/${projectId}/order/${orderId}/nesting`}
+              className="text-sm border border-blue-600 bg-blue-50 text-blue-800 hover:bg-blue-100 font-medium px-3 py-2 rounded-lg whitespace-nowrap flex items-center gap-1.5 transition"
+            >
+              ⚡ Sheet Nesting & CNC (G-Code / DXF)
+            </Link>
         </div>
         </div>
 

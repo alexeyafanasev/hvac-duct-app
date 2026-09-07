@@ -304,8 +304,8 @@ export function ElbowFlatPattern({
 
   const angleRad = (a * Math.PI) / 180;
 
-  // Short Way: поворот по ширине
-  // Long Way: поворот по высоте
+  // Short Way: turning along width
+  // Long Way: turning along height
   const turningSize = w;
   const fixedSide = bendType === "long" ? w : h;
 
@@ -313,7 +313,7 @@ export function ElbowFlatPattern({
   const outerArc = angleRad * (r + turningSize);
 
   // ===== Drawing scale =====
-  const maxSectorBox = 250; // коробка для одной кривой детали
+  const maxSectorBox = 250; // bounding box for a single curved piece
   const maxRectWidth = 300;
   const maxRectHeight = 100;
 
