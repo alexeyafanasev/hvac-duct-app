@@ -67,6 +67,7 @@ export default function NestingPage() {
   const [activeSheetIndex, setActiveSheetIndex] = useState(0);
   const [selectedPieceId, setSelectedPieceId] = useState(null);
   const [labelMode, setLabelMode] = useState("badge"); // "badge" | "name" | "dims" | "none"
+  const [zoomLevel, setZoomLevel] = useState(1); // 1 = fit, 1.25, 1.5, 2, 3
 
   // --- G-Code Configuration ---
   const [gcodeConfig, setGcodeConfig] = useState(DEFAULT_GCODE_CONFIG);
@@ -446,7 +447,7 @@ export default function NestingPage() {
                 onChange={(e) => setAllowRotation(e.target.checked)}
                 className="rounded text-blue-600"
               />
-              <span>Allow 90° Rotation for Tighter Fit</span>
+              <span>Allow Rotation (0°, 90°, 180°, 270°) for Tighter Fit</span>
             </label>
 
             <label className="flex items-center gap-2 cursor-pointer">
@@ -629,6 +630,44 @@ export default function NestingPage() {
                 </div>
               </div>
 
+              {/* Zoom View Controls */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 font-medium">Zoom:</span>
+                <div className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-100 p-0.5 text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel((z) => Math.max(1, Math.round((z - 0.25) * 100) / 100))}
+                    disabled={zoomLevel <= 1}
+                    className="px-2 py-1 rounded-md text-gray-700 hover:text-gray-900 disabled:opacity-40 transition"
+                    title="Zoom Out"
+                  >
+                    −
+                  </button>
+                  <span className="px-2 py-1 font-mono text-gray-800 font-semibold min-w-[3.2rem] text-center">
+                    {Math.round(zoomLevel * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))}
+                    disabled={zoomLevel >= 3}
+                    className="px-2 py-1 rounded-md text-gray-700 hover:text-gray-900 disabled:opacity-40 transition"
+                    title="Zoom In"
+                  >
+                    +
+                  </button>
+                  {zoomLevel !== 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel(1)}
+                      className="px-2 py-1 rounded-md text-blue-600 hover:text-blue-800 font-semibold transition"
+                      title="Reset Zoom to Fit"
+                    >
+                      Fit
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="flex items-center gap-3">
                 {currentSheet.sheetType === "straight-flush" ? (
                   <span className="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-md border border-emerald-300">
@@ -646,13 +685,14 @@ export default function NestingPage() {
             </div>
 
             {/* SVG Metal Sheet Container */}
-            <div className="w-full overflow-x-auto bg-slate-900 rounded-xl p-4 shadow-inner">
+            <div className="w-full overflow-auto bg-slate-900 rounded-xl p-4 shadow-inner max-h-[650px]">
               <SheetCanvasSvg
                 sheet={currentSheet}
                 selectedPieceId={selectedPieceId}
                 onSelectPiece={setSelectedPieceId}
                 showRapids={showRapids}
                 labelMode={labelMode}
+                zoomLevel={zoomLevel}
               />
             </div>
           </div>
@@ -742,7 +782,11 @@ export default function NestingPage() {
                         X:{p.x}&quot;, Y:{p.y}&quot;
                       </td>
                       <td className="px-4 py-2.5">
-                        {p.rotated ? (
+                        {p.rotationAngle ? (
+                          <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">
+                            {p.rotationAngle}°
+                          </span>
+                        ) : p.rotated ? (
                           <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">
                             90°
                           </span>
@@ -929,7 +973,7 @@ export default function NestingPage() {
 /**
  * Interactive SVG Canvas component representing the sheet and nested parts
  */
-function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, labelMode = "badge" }) {
+function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, labelMode = "badge", zoomLevel = 1 }) {
   const sw = sheet.sheetWidth;
   const sh = sheet.sheetHeight;
   const m = sheet.margin;
@@ -950,11 +994,16 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
   }, [showRapids, sheet, sh]);
 
   return (
-    <div className="relative w-full overflow-hidden flex justify-center items-center">
+    <div className="relative w-full overflow-auto max-h-[650px] flex justify-center items-center">
       <svg
         viewBox={`-2 -2 ${sw + 4} ${sh + 4}`}
-        className="w-full max-h-[600px] select-none"
-        style={{ transformOrigin: "center" }}
+        className="select-none transition-all duration-150"
+        style={{
+          width: `${zoomLevel * 100}%`,
+          minWidth: "100%",
+          maxHeight: zoomLevel === 1 ? "600px" : "none",
+          transformOrigin: "center",
+        }}
       >
         <defs>
           {/* Subtle grid pattern: 12 inches grid */}
@@ -963,7 +1012,8 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
               d="M 12 0 L 0 0 0 12"
               fill="none"
               stroke="rgba(255, 255, 255, 0.07)"
-              strokeWidth="0.2"
+              strokeWidth="0.75"
+              vectorEffect="non-scaling-stroke"
             />
           </pattern>
         </defs>
@@ -976,7 +1026,8 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
           height={sh}
           fill="#1e293b"
           stroke="#475569"
-          strokeWidth="0.5"
+          strokeWidth="1.5"
+          vectorEffect="non-scaling-stroke"
           rx="0.5"
         />
 
@@ -992,8 +1043,9 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
             height={sh - 2 * m}
             fill="none"
             stroke="#ef4444"
-            strokeWidth="0.3"
-            strokeDasharray="2 2"
+            strokeWidth="1"
+            strokeDasharray="5 4"
+            vectorEffect="non-scaling-stroke"
             opacity="0.6"
           />
         )}
@@ -1004,8 +1056,9 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
             d={rapidPathD}
             fill="none"
             stroke="#fb923c"
-            strokeWidth="0.3"
-            strokeDasharray="1 1"
+            strokeWidth="1"
+            strokeDasharray="3 3"
+            vectorEffect="non-scaling-stroke"
             opacity="0.7"
           />
         )}
@@ -1045,16 +1098,17 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
             >
               {/* Native browser tooltip on hover */}
               <title>
-                {`#${idx + 1}: ${p.piece.partName}\nParent: ${p.piece.parentName || "Fitting"}\nSize: ${round2(p.placedWidth)}" × ${round2(p.placedHeight)}"\nPos: X=${round2(p.x)}", Y=${round2(p.y)}"${p.rotated ? " (Rotated 90°)" : ""}`}
+                {`#${idx + 1}: ${p.piece.partName}\nParent: ${p.piece.parentName || "Fitting"}\nSize: ${round2(p.placedWidth)}" × ${round2(p.placedHeight)}"\nPos: X=${round2(p.x)}", Y=${round2(p.y)}"${p.rotationAngle ? ` (Rotated ${p.rotationAngle}°)` : p.rotated ? " (Rotated 90°)" : ""}`}
               </title>
 
               {/* Part Outer Cut Path */}
               <path
                 d={pathD}
                 fill={color}
-                fillOpacity={isSelected ? 0.45 : 0.25}
-                stroke={isSelected ? "#60a5fa" : "#e2e8f0"}
-                strokeWidth={isSelected ? 0.7 : 0.4}
+                fillOpacity={isSelected ? 0.55 : 0.28}
+                stroke={isSelected ? "#38bdf8" : "#f1f5f9"}
+                strokeWidth={isSelected ? 1.8 : 1}
+                vectorEffect="non-scaling-stroke"
                 className="transition-colors duration-150"
               />
 
@@ -1067,8 +1121,9 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
                   x2={b.x2}
                   y2={sh - b.y2}
                   stroke="#ef4444"
-                  strokeWidth="0.35"
-                  strokeDasharray="1.5 1"
+                  strokeWidth={1}
+                  strokeDasharray="4 3"
+                  vectorEffect="non-scaling-stroke"
                 />
               ))}
 
@@ -1096,8 +1151,9 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
                         rx={pillH * 0.3}
                         fill="#0f172a"
                         fillOpacity="0.88"
-                        stroke={isSelected ? "#60a5fa" : "#94a3b8"}
-                        strokeWidth="0.15"
+                        stroke={isSelected ? "#60a5fa" : "#64748b"}
+                        strokeWidth="1"
+                        vectorEffect="non-scaling-stroke"
                       />
                       <text
                         x={cx}
@@ -1132,8 +1188,9 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
                         rx="0.4"
                         fill="#0f172a"
                         fillOpacity="0.88"
-                        stroke={isSelected ? "#60a5fa" : "#94a3b8"}
-                        strokeWidth="0.15"
+                        stroke={isSelected ? "#60a5fa" : "#64748b"}
+                        strokeWidth="1"
+                        vectorEffect="non-scaling-stroke"
                       />
                       <text
                         x={cx}
@@ -1179,8 +1236,9 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
                         rx="0.4"
                         fill="#0f172a"
                         fillOpacity="0.88"
-                        stroke={isSelected ? "#60a5fa" : "#94a3b8"}
-                        strokeWidth="0.15"
+                        stroke={isSelected ? "#60a5fa" : "#64748b"}
+                        strokeWidth="1"
+                        vectorEffect="non-scaling-stroke"
                       />
                       <text
                         x={cx}
@@ -1216,9 +1274,9 @@ function SheetCanvasSvg({ sheet, selectedPieceId, onSelectPiece, showRapids, lab
         })}
 
         {/* 4. Origin Indicator (X=0, Y=0 at bottom-left) */}
-        <circle cx="0" cy={sh} r="1.5" fill="#22c55e" />
-        <line x1="0" y1={sh} x2="6" y2={sh} stroke="#22c55e" strokeWidth="0.6" />
-        <line x1="0" y1={sh} x2="0" y2={sh - 6} stroke="#22c55e" strokeWidth="0.6" />
+        <circle cx="0" cy={sh} r="1.2" fill="#22c55e" />
+        <line x1="0" y1={sh} x2="6" y2={sh} stroke="#22c55e" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        <line x1="0" y1={sh} x2="0" y2={sh - 6} stroke="#22c55e" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
         <text x="7" y={sh - 1} fontSize="2.5" fill="#22c55e" fontWeight="bold">
           X+
         </text>

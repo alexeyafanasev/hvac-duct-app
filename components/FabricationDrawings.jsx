@@ -43,246 +43,363 @@ export function StraightFlatPattern({
   width = "",
   height = "",
   length = "",
-  className = "w-full max-w-3xl",
+  className = "w-full max-w-4xl",
 }) {
   const w = Number(width) || 0;
   const h = Number(height) || 0;
-  const l = Number(length) || 0;
+  const rawL = Number(length) || 0;
 
-  const realFlatWidth = w * 2 + h * 2;
-  const realFlatHeight = l;
+  // Cut length rule:
+  // If ordered length == 48" => cut length = 48" (standard sheet width, no length trim)
+  // If ordered length < 48" => cut length = ordered length - 1"
+  // (If ordered length > 48" and not 48", cutL = max(0, rawL - 1))
+  const cutL = Math.abs(rawL - 48) < 1e-4 ? 48.0 : Math.max(0, rawL - 1.0);
 
-  const maxDrawWidth = 500;
-  const maxDrawHeight = 290;
+  const pocketAllowance = 1.0; // 1" for Pittsburgh pocket
+  const flangeAllowance = 0.25; // 1/4" for Pittsburgh flange
+  const cleatNotch = 1.0; // 1" end notch on corners for S-cleat and Drive-cleat
+
+  // L-Section flat blank dimensions (2 pieces make 1 complete duct)
+  const bodyW = w + h;
+  const realFlatWidth = pocketAllowance + bodyW + flangeAllowance; // W + H + 1.25"
+  const realFlatHeight = cutL;
+
+  const maxDrawW = 580;
+  const maxDrawH = 260;
 
   const scale = Math.min(
-    maxDrawWidth / (realFlatWidth || 1),
-    maxDrawHeight / (realFlatHeight || 1)
+    maxDrawW / (realFlatWidth || 1),
+    maxDrawH / (realFlatHeight || 1)
   );
 
-  const drawWidth = realFlatWidth * scale;
-  const drawHeight = realFlatHeight * scale;
+  const drawTotalW = realFlatWidth * scale;
+  const drawTotalH = realFlatHeight * scale;
 
-  const panel1 = w * scale;
-  const panel2 = h * scale;
-  const panel3 = w * scale;
-  const panel4 = h * scale;
+  const originX = 150 + (maxDrawW - drawTotalW) / 2;
+  const originY = 85 + (maxDrawH - drawTotalH) / 2;
 
-  const x0 = 240;
-  const y0 = 70;
+  const drawP = pocketAllowance * scale;
+  const drawF = flangeAllowance * scale;
+  const drawN = Math.min(cleatNotch * scale, drawTotalH / 2 - 2);
+  const drawW = w * scale;
+  const drawH = h * scale;
+  const drawBodyW = drawW + drawH;
 
-  const x1 = x0 + panel1;
-  const x2 = x1 + panel2;
-  const x3 = x2 + panel3;
-  const x4 = x3 + panel4;
+  const xPocket = originX;
+  const xBodyLeft = originX + drawP;
+  const xCornerFold = originX + drawP + drawW;
+  const xBodyRight = originX + drawP + drawBodyW;
+  const xFlange = originX + drawTotalW;
 
-  const topY = y0;
-  const bottomY = y0 + drawHeight;
-  const centerY = y0 + drawHeight / 2;
+  const yTop = originY;
+  const yNotchTop = originY + drawN;
+  const yNotchBottom = originY + drawTotalH - drawN;
+  const yBottom = originY + drawTotalH;
 
-  const rightDimX = x4 + 32;
-  const rightTextX = x4 + 52;
+  // 45-degree corner miter cuts meeting directly at the 4 bend line corners:
+  // Top-left: (xBodyLeft, yNotchTop)
+  // Top-right: (xBodyRight, yNotchTop)
+  // Bottom-right: (xBodyRight, yNotchBottom)
+  // Bottom-left: (xBodyLeft, yNotchBottom)
+  const cutPath = [
+    `M ${xBodyLeft + drawN} ${yTop}`,
+    `L ${xBodyRight - drawN} ${yTop}`,
+    `L ${xBodyRight} ${yNotchTop}`,
+    `L ${xFlange} ${yNotchTop + drawF}`,
+    `L ${xFlange} ${yNotchBottom - drawF}`,
+    `L ${xBodyRight} ${yNotchBottom}`,
+    `L ${xBodyRight - drawN} ${yBottom}`,
+    `L ${xBodyLeft + drawN} ${yBottom}`,
+    `L ${xBodyLeft} ${yNotchBottom}`,
+    `L ${xPocket} ${yNotchBottom - drawP}`,
+    `L ${xPocket} ${yNotchTop + drawP}`,
+    `L ${xBodyLeft} ${yNotchTop}`,
+    `Z`,
+  ].join(" ");
+
+  const rightDimX = xFlange + 36;
+  const rightTextX = xFlange + 54;
 
   return (
     <div className={className}>
       <svg
-        viewBox="0 0 900 420"
-        className="w-full h-auto border rounded-xl bg-white"
+        viewBox="0 0 920 450"
+        className="w-full h-auto border rounded-xl bg-white shadow-xs"
       >
-        <text x="40" y="26" fontSize="18" fontWeight="600" fill="#111827">
-          Straight Duct Flat Pattern
+        {/* Title & subtitle */}
+        <text x="30" y="28" fontSize="16" fontWeight="700" fill="#0f172a">
+          Straight Duct Flat Pattern — L-Section (2 pcs per duct)
+        </text>
+        <text x="30" y="48" fontSize="12" fill="#64748b">
+          Ordered: {toInchesFraction(w)} × {toInchesFraction(h)} × {toInchesFraction(rawL)} | Total Cut: {toInchesFraction(realFlatWidth)} × {toInchesFraction(cutL)}
+          {rawL !== cutL ? ` (${toInchesFraction(rawL)} - 1″ S/Drive allowance)` : " (48″ sheet flush)"}
         </text>
 
-
-        {/* outer rectangle */}
-        <rect
-          x={x0}
-          y={topY}
-          width={drawWidth}
-          height={drawHeight}
-          fill="#F9FAFB"
-          stroke="#111827"
-          strokeWidth="2"
+        {/* Outer cut blank with corner notches */}
+        <path
+          d={cutPath}
+          fill="#f8fafc"
+          stroke="#0f172a"
+          strokeWidth="2.2"
+          strokeLinejoin="round"
         />
 
-        {/* fold lines */}
+        {/* 90° Corner bend line between width and height panels */}
         <line
-          x1={x1}
-          y1={topY}
-          x2={x1}
-          y2={bottomY}
-          stroke="#6B7280"
+          x1={xCornerFold}
+          y1={yTop}
+          x2={xCornerFold}
+          y2={yBottom}
+          stroke="#dc2626"
+          strokeWidth="2"
           strokeDasharray="6 4"
-          strokeWidth="2"
-        />
-        <line
-          x1={x2}
-          y1={topY}
-          x2={x2}
-          y2={bottomY}
-          stroke="#6B7280"
-          strokeDasharray="6 4"
-          strokeWidth="2"
-        />
-        <line
-          x1={x3}
-          y1={topY}
-          x2={x3}
-          y2={bottomY}
-          stroke="#6B7280"
-          strokeDasharray="6 4"
-          strokeWidth="2"
         />
 
-        {/* panel labels */}
-        <text
-          x={x0 + panel1 / 2}
-          y={centerY}
-          textAnchor="middle"
-          fontSize="22"
-          fontWeight="700"
-          fill="#B91C1C"
-        >
-          {toInchesFraction(w) || "-"}
-        </text>
-
-        <text
-          x={x1 + panel2 / 2}
-          y={centerY}
-          textAnchor="middle"
-          fontSize="22"
-          fontWeight="700"
-          fill="#B91C1C"
-        >
-          {toInchesFraction(h) || "-"}
-        </text>
-
-        <text
-          x={x2 + panel3 / 2}
-          y={centerY}
-          textAnchor="middle"
-          fontSize="22"
-          fontWeight="700"
-          fill="#B91C1C"
-        >
-          {toInchesFraction(w) || "-"}
-        </text>
-
-        <text
-          x={x3 + panel4 / 2}
-          y={centerY}
-          textAnchor="middle"
-          fontSize="22"
-          fontWeight="700"
-          fill="#B91C1C"
-        >
-          {toInchesFraction(h) || "-"}
-        </text>
-
-        {/* top dimension line for developed width */}
+        {/* Pittsburgh Lock fold line (1" pocket) */}
         <line
-          x1={x0}
-          y1={topY - 10}
-          x2={x4}
-          y2={topY - 10}
-          stroke="#111827"
+          x1={xBodyLeft}
+          y1={yNotchTop}
+          x2={xBodyLeft}
+          y2={yNotchBottom}
+          stroke="#2563eb"
+          strokeWidth="1.5"
+          strokeDasharray="5 3"
+        />
+
+        {/* Pittsburgh Flange fold line (1/4" flange) */}
+        <line
+          x1={xBodyRight}
+          y1={yNotchTop}
+          x2={xBodyRight}
+          y2={yNotchBottom}
+          stroke="#059669"
+          strokeWidth="1.5"
+          strokeDasharray="5 3"
+        />
+
+        {/* 1" S-Cleat & Drive-Cleat reference lines (top and bottom) */}
+        <line
+          x1={xBodyLeft}
+          y1={yNotchTop}
+          x2={xBodyRight}
+          y2={yNotchTop}
+          stroke="#94a3b8"
+          strokeWidth="1"
+          strokeDasharray="3 3"
+        />
+        <line
+          x1={xBodyLeft}
+          y1={yNotchBottom}
+          x2={xBodyRight}
+          y2={yNotchBottom}
+          stroke="#94a3b8"
+          strokeWidth="1"
+          strokeDasharray="3 3"
+        />
+
+        {/* S-Cleat / Drive-Cleat end zone labels */}
+        {drawN > 14 && (
+          <>
+            <text
+              x={(xBodyLeft + xBodyRight) / 2}
+              y={yTop + drawN / 2 + 4}
+              textAnchor="middle"
+              fontSize="10"
+              fontWeight="600"
+              fill="#64748b"
+            >
+              1″ S-Cleat / Drive-Cleat Zone
+            </text>
+            <text
+              x={(xBodyLeft + xBodyRight) / 2}
+              y={yBottom - drawN / 2 + 4}
+              textAnchor="middle"
+              fontSize="10"
+              fontWeight="600"
+              fill="#64748b"
+            >
+              1″ S-Cleat / Drive-Cleat Zone
+            </text>
+          </>
+        )}
+
+        {/* Panel Labels (Width & Height) */}
+        <text
+          x={xBodyLeft + drawW / 2}
+          y={(yTop + yBottom) / 2}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize="18"
+          fontWeight="700"
+          fill="#1e293b"
+        >
+          {toInchesFraction(w)}
+        </text>
+        <text
+          x={xBodyLeft + drawW / 2}
+          y={(yTop + yBottom) / 2 + 18}
+          textAnchor="middle"
+          fontSize="11"
+          fill="#64748b"
+        >
+          Panel W
+        </text>
+
+        <text
+          x={xCornerFold + drawH / 2}
+          y={(yTop + yBottom) / 2}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize="18"
+          fontWeight="700"
+          fill="#1e293b"
+        >
+          {toInchesFraction(h)}
+        </text>
+        <text
+          x={xCornerFold + drawH / 2}
+          y={(yTop + yBottom) / 2 + 18}
+          textAnchor="middle"
+          fontSize="11"
+          fill="#64748b"
+        >
+          Panel H
+        </text>
+
+        {/* Longitudinal Seam Annotations */}
+        <text
+          x={originX - 10}
+          y={(yTop + yBottom) / 2}
+          textAnchor="middle"
+          transform={`rotate(-90 ${originX - 10} ${(yTop + yBottom) / 2})`}
+          fontSize="11"
+          fontWeight="600"
+          fill="#2563eb"
+        >
+          +1″ Pittsburgh Pocket
+        </text>
+
+        <text
+          x={xFlange + 12}
+          y={(yTop + yBottom) / 2}
+          textAnchor="middle"
+          transform={`rotate(90 ${xFlange + 12} ${(yTop + yBottom) / 2})`}
+          fontSize="11"
+          fontWeight="600"
+          fill="#059669"
+        >
+          +1/4″ Pittsburgh Flange
+        </text>
+
+        {/* Corner Notch Callout Labels */}
+        <text
+          x={xPocket - 6}
+          y={yTop + drawN / 2 + 4}
+          textAnchor="end"
+          fontSize="10"
+          fill="#94a3b8"
+        >
+          45° notch
+        </text>
+        <text
+          x={xPocket - 6}
+          y={yBottom - drawN / 2 + 4}
+          textAnchor="end"
+          fontSize="10"
+          fill="#94a3b8"
+        >
+          45° notch
+        </text>
+
+        {/* Top dimension line for developed cut width */}
+        <line
+          x1={xPocket}
+          y1={yTop - 14}
+          x2={xFlange}
+          y2={yTop - 14}
+          stroke="#0f172a"
           strokeWidth="1.5"
         />
         <line
-          x1={x0}
-          y1={topY - 16}
-          x2={x0}
-          y2={topY - 4}
-          stroke="#111827"
+          x1={xPocket}
+          y1={yTop - 20}
+          x2={xPocket}
+          y2={yTop - 8}
+          stroke="#0f172a"
           strokeWidth="1.5"
         />
         <line
-          x1={x4}
-          y1={topY - 16}
-          x2={x4}
-          y2={topY - 4}
-          stroke="#111827"
+          x1={xFlange}
+          y1={yTop - 20}
+          x2={xFlange}
+          y2={yTop - 8}
+          stroke="#0f172a"
           strokeWidth="1.5"
         />
         <text
-          x={(x0 + x4) / 2}
-          y={topY - 14}
+          x={(xPocket + xFlange) / 2}
+          y={yTop - 19}
           textAnchor="middle"
-          fontSize="14"
-          fill="#111827"
+          fontSize="12"
+          fontWeight="600"
+          fill="#0f172a"
         >
-          Developed Width = {toInchesFraction(realFlatWidth) || "-"}
+          Total Cut Width = {toInchesFraction(realFlatWidth)} (1″ + {w}″ + {h}″ + 1/4″)
         </text>
 
-        {/* right vertical dimension for length */}
+        {/* Right vertical dimension for cut length */}
         <line
           x1={rightDimX}
-          y1={topY}
+          y1={yTop}
           x2={rightDimX}
-          y2={bottomY}
-          stroke="#111827"
+          y2={yBottom}
+          stroke="#0f172a"
           strokeWidth="1.5"
         />
         <line
-          x1={rightDimX - 6}
-          y1={topY}
-          x2={rightDimX + 6}
-          y2={topY}
-          stroke="#111827"
+          x1={rightDimX - 5}
+          y1={yTop}
+          x2={rightDimX + 5}
+          y2={yTop}
+          stroke="#0f172a"
           strokeWidth="1.5"
         />
         <line
-          x1={rightDimX - 6}
-          y1={bottomY}
-          x2={rightDimX + 6}
-          y2={bottomY}
-          stroke="#111827"
+          x1={rightDimX - 5}
+          y1={yBottom}
+          x2={rightDimX + 5}
+          y2={yBottom}
+          stroke="#0f172a"
           strokeWidth="1.5"
         />
         <text
           x={rightTextX}
-          y={(topY + bottomY) / 2}
-          transform={`rotate(90 ${rightTextX} ${(topY + bottomY) / 2})`}
+          y={(yTop + yBottom) / 2}
+          transform={`rotate(90 ${rightTextX} ${(yTop + yBottom) / 2})`}
           textAnchor="middle"
-          fontSize="16"
+          fontSize="13"
           fontWeight="600"
-          fill="#111827"
+          fill="#0f172a"
         >
-          Length = {toInchesFraction(l) || "-"}
+          Cut Length = {toInchesFraction(cutL)}
+          {rawL !== cutL ? ` (Ordered: ${toInchesFraction(rawL)})` : ""}
         </text>
 
-        {/* fold labels */}
+        {/* Fold line label at bottom */}
         <text
-          x={x1}
-          y={bottomY + 24}
+          x={xCornerFold}
+          y={yBottom + 20}
           textAnchor="middle"
-          fontSize="12"
-          fill="#6B7280"
+          fontSize="11"
+          fontWeight="600"
+          fill="#dc2626"
         >
-          Fold
-        </text>
-        <text
-          x={x2}
-          y={bottomY + 24}
-          textAnchor="middle"
-          fontSize="12"
-          fill="#6B7280"
-        >
-          Fold
-        </text>
-        <text
-          x={x3}
-          y={bottomY + 24}
-          textAnchor="middle"
-          fontSize="12"
-          fill="#6B7280"
-        >
-          Fold
+          90° Corner Fold
         </text>
 
-        {/* summary */}
-        <text x="40" y="360" fontSize="13" fill="#374151">
-          W = {toInchesFraction(w) || "-"}, H = {toInchesFraction(h) || "-"}, L = {toInchesFraction(l) || "-"}
+        {/* Legend / summary at bottom */}
+        <text x="30" y="432" fontSize="11" fill="#64748b">
+          Legend: Red dashed = 90° corner fold; Blue dashed = 1″ Pittsburgh pocket seam; Green dashed = 1/4″ Pittsburgh flange; Gray dashed = 1″ S-Cleat / Drive-Cleat end zone.
         </text>
       </svg>
     </div>
@@ -600,37 +717,13 @@ export function TransitionFlatPattern({
   const h1 = Number(height1) || 0;
   const w2 = Number(width2) || 0;
   const h2 = Number(height2) || 0;
-  const L = Number(length) || 0;
+  const rawL = Number(length) || 0;
+
+  // Trapezoid body height is 1" less than ordered size
+  const lBody = Math.max(1, rawL - 1.0);
 
   const dW = w1 - w2;
   const dH = h1 - h2;
-
-  function getPanelBounds(panel) {
-    const xs = [panel.p1.x, panel.p2.x, panel.p3.x, panel.p4.x];
-    const ys = [panel.p1.y, panel.p2.y, panel.p3.y, panel.p4.y];
-
-    return {
-        minX: Math.min(...xs),
-        maxX: Math.max(...xs),
-        minY: Math.min(...ys),
-        maxY: Math.max(...ys),
-    };
-  }
-
-  function getCombinedBounds(panels) {
-    const bounds = panels.map(getPanelBounds);
-
-    return {
-        minX: Math.min(...bounds.map((b) => b.minX)),
-        maxX: Math.max(...bounds.map((b) => b.maxX)),
-        minY: Math.min(...bounds.map((b) => b.minY)),
-        maxY: Math.max(...bounds.map((b) => b.maxY)),
-    };
-  }
-
-    const canvasWidth = 1100;
-    const canvasHeight = 560;
-    const padding = 40;
 
   function getOffsets(just) {
     switch (just) {
@@ -659,151 +752,192 @@ export function TransitionFlatPattern({
   const { dx, dy } = getOffsets(justification);
 
   function trueLength(x, y) {
-    return Math.sqrt(L ** 2 + x ** 2 + y ** 2);
+    return Math.sqrt(lBody ** 2 + x ** 2 + y ** 2);
   }
 
-  // True slant lengths from 3D geometry
+  // Slant differences from 3D geometry
+  const topEdgeOffset = dy + dH / 2;
+  const bottomEdgeOffset = dy - dH / 2;
+  const leftEdgeOffset = dx + dW / 2;
+  const rightEdgeOffset = dx - dW / 2;
 
-    // Top edge difference
-    const topEdgeOffset = dy + dH / 2;
+  // Top panel
+  const topLeft = trueLength(leftEdgeOffset, topEdgeOffset);
+  const topRight = trueLength(rightEdgeOffset, topEdgeOffset);
 
-    // Bottom edge difference
-    const bottomEdgeOffset = dy - dH / 2;
+  // Bottom panel
+  const bottomLeft = trueLength(leftEdgeOffset, bottomEdgeOffset);
+  const bottomRight = trueLength(rightEdgeOffset, bottomEdgeOffset);
 
-    // Left edge difference
-    const leftEdgeOffset = dx + dW / 2;
+  // Left panel
+  const leftTop = trueLength(leftEdgeOffset, topEdgeOffset);
+  const leftBottom = trueLength(leftEdgeOffset, bottomEdgeOffset);
 
-    // Right edge difference
-    const rightEdgeOffset = dx - dW / 2;
+  // Right panel
+  const rightTop = trueLength(rightEdgeOffset, topEdgeOffset);
+  const rightBottom = trueLength(rightEdgeOffset, bottomEdgeOffset);
 
-    // Top panel
-    const topLeft = trueLength(leftEdgeOffset, topEdgeOffset);
-    const topRight = trueLength(rightEdgeOffset, topEdgeOffset);
+  function lineInter(p1, d1, p2, d2) {
+    const det = d1.x * d2.y - d1.y * d2.x;
+    if (Math.abs(det) < 1e-9) return { x: p1.x, y: p1.y };
+    const dX = p2.x - p1.x;
+    const dY = p2.y - p1.y;
+    const t = (dX * d2.y - dY * d2.x) / det;
+    return { x: p1.x + t * d1.x, y: p1.y + t * d1.y };
+  }
 
-    // Bottom panel
-    const bottomLeft = trueLength(leftEdgeOffset, bottomEdgeOffset);
-    const bottomRight = trueLength(rightEdgeOffset, bottomEdgeOffset);
+  function buildNotchedPanel(
+    top,
+    bottom,
+    left,
+    right,
+    leftAllowance = 1.0,
+    rightAllowance = 0.25
+  ) {
+    const p = leftAllowance;
+    const f = rightAllowance;
+    const n = 1.0; // 1" Cleat allowance along bases
 
-    // Left panel
-    const leftTop = trueLength(leftEdgeOffset, topEdgeOffset);
-    const leftBottom = trueLength(leftEdgeOffset, bottomEdgeOffset);
-
-    // Right panel
-    const rightTop = trueLength(rightEdgeOffset, topEdgeOffset);
-    const rightBottom = trueLength(rightEdgeOffset, bottomEdgeOffset);
-
-    function buildTruePanel(top, bottom, left, right) {
-        const p1 = { x: 0, y: 0 };
-        const p2 = { x: top, y: 0 };
-
-        if (top <= 0 || bottom <= 0) {
-        return {
-            p1,
-            p2,
-            p3: { x: top, y: 0 },
-            p4: { x: 0, y: 0 },
-            lengths: { top, right, bottom, left },
-            rawHeight: 0,
-        };
-        }
-
-    // Symmetric case: equal side lengths -> centered trapezoid
-    if (Math.abs(left - right) < 0.0001) {
-      const inset = (top - bottom) / 2;
-      const h = Math.sqrt(Math.max(left ** 2 - inset ** 2, 0));
-
+    if (top <= 0 || bottom <= 0 || left <= 0 || right <= 0) {
       return {
-        p1,
-        p2,
-        p3: { x: inset + bottom, y: h },
-        p4: { x: inset, y: h },
+        path: "",
+        width: Math.max(top, bottom),
+        height: 0,
+        bendLines: [],
+        p1: { x: 0, y: 0 },
+        p2: { x: top, y: 0 },
+        p3: { x: bottom, y: 0 },
+        p4: { x: 0, y: 0 },
         lengths: { top, right, bottom, left },
-        rawHeight: h,
       };
     }
 
-    // General case:
-    // p1=(0,0), p2=(top,0), p4=(x,h), p3=(x+bottom,h)
-    // |p1-p4| = left
-    // |p2-p3| = right
-    const denom = 2 * (top - bottom);
-
-    let x;
-    if (Math.abs(denom) < 0.0001) {
-      // If top ~= bottom, solve as near-parallelogram but keep bases horizontal
-      x = (left ** 2 - right ** 2) / (4 * top || 0.0001);
+    let x, h;
+    if (Math.abs(left - right) < 0.0001) {
+      const inset = (top - bottom) / 2;
+      h = Math.sqrt(Math.max(left ** 2 - inset ** 2, 0));
+      x = inset;
     } else {
-      x = (left ** 2 - right ** 2 + (top - bottom) ** 2) / denom;
+      const denom = 2 * (top - bottom);
+      if (Math.abs(denom) < 0.0001) {
+        x = (left ** 2 - right ** 2) / (4 * top || 0.0001);
+      } else {
+        x = (left ** 2 - right ** 2 + (top - bottom) ** 2) / denom;
+      }
+      h = Math.sqrt(Math.max(left ** 2 - x ** 2, 0));
     }
 
-    const h = Math.sqrt(Math.max(left ** 2 - x ** 2, 0));
+    const rawP1 = { x: 0, y: 0 };
+    const rawP2 = { x: top, y: 0 };
+    const rawP3 = { x: x + bottom, y: h };
+    const rawP4 = { x: x, y: h };
+
+    const vLeft = { x: rawP4.x - rawP1.x, y: rawP4.y - rawP1.y };
+    const lenLeft = Math.sqrt(vLeft.x ** 2 + vLeft.y ** 2) || 1;
+    const dirLeft = { x: vLeft.x / lenLeft, y: vLeft.y / lenLeft };
+    const normLeft = { x: -dirLeft.y, y: dirLeft.x };
+
+    const vRight = { x: rawP3.x - rawP2.x, y: rawP3.y - rawP2.y };
+    const lenRight = Math.sqrt(vRight.x ** 2 + vRight.y ** 2) || 1;
+    const dirRight = { x: vRight.x / lenRight, y: vRight.y / lenRight };
+    const normRight = { x: dirRight.y, y: -dirRight.x };
+
+    const ptLeftLine = {
+      x: rawP1.x + p * normLeft.x,
+      y: rawP1.y + p * normLeft.y,
+    };
+    const ptRightLine = {
+      x: rawP2.x + f * normRight.x,
+      y: rawP2.y + f * normRight.y,
+    };
+
+    const rayP1 = { x: -1, y: 1 };
+    const interTL = lineInter(rawP1, rayP1, ptLeftLine, dirLeft);
+
+    const rayP2 = { x: 1, y: 1 };
+    const interTR = lineInter(rawP2, rayP2, ptRightLine, dirRight);
+
+    const rayP3 = { x: -1, y: 1 };
+    const interBR = lineInter(rawP3, rayP3, ptRightLine, dirRight);
+
+    const rayP4 = { x: -1, y: -1 };
+    const interBL = lineInter(rawP4, rayP4, ptLeftLine, dirLeft);
+
+    const rawPts = [
+      { x: rawP1.x + n, y: -n },
+      { x: rawP2.x - n, y: -n },
+      { x: rawP2.x, y: rawP2.y },
+      interTR,
+      interBR,
+      { x: rawP3.x, y: rawP3.y },
+      { x: rawP3.x - n, y: h + n },
+      { x: rawP4.x + n, y: h + n },
+      { x: rawP4.x, y: rawP4.y },
+      interBL,
+      interTL,
+      { x: rawP1.x, y: rawP1.y },
+    ];
+
+    const minX = Math.min(...rawPts.map((pt) => pt.x));
+    const maxX = Math.max(...rawPts.map((pt) => pt.x));
+    const minY = Math.min(...rawPts.map((pt) => pt.y));
+    const maxY = Math.max(...rawPts.map((pt) => pt.y));
+
+    const pts = rawPts.map((pt) => ({
+      x: pt.x - minX,
+      y: pt.y - minY,
+    }));
+
+    const p1 = { x: rawP1.x - minX, y: rawP1.y - minY };
+    const p2 = { x: rawP2.x - minX, y: rawP2.y - minY };
+    const p3 = { x: rawP3.x - minX, y: rawP3.y - minY };
+    const p4 = { x: rawP4.x - minX, y: rawP4.y - minY };
+
+    const bendLines = [
+      { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, color: "#94a3b8" }, // Top cleat
+      { x1: p4.x, y1: p4.y, x2: p3.x, y2: p3.y, color: "#94a3b8" }, // Bottom cleat
+      { x1: p1.x, y1: p1.y, x2: p4.x, y2: p4.y, color: leftAllowance > 0.5 ? "#2563eb" : "#059669" }, // Left allowance
+      { x1: p2.x, y1: p2.y, x2: p3.x, y2: p3.y, color: rightAllowance > 0.5 ? "#2563eb" : "#059669" }, // Right allowance
+    ];
 
     return {
+      pts,
+      width: maxX - minX,
+      height: maxY - minY,
       p1,
       p2,
-      p3: { x: x + bottom, y: h },
-      p4: { x: x, y: h },
+      p3,
+      p4,
+      bendLines,
       lengths: { top, right, bottom, left },
-      rawHeight: h,
     };
   }
 
-  function normalizePanel(panel) {
-    const minX = Math.min(panel.p1.x, panel.p2.x, panel.p3.x, panel.p4.x);
-    const minY = Math.min(panel.p1.y, panel.p2.y, panel.p3.y, panel.p4.y);
+  // Top & Bottom panels have 1/4" Pittsburgh flanges on BOTH sides
+  const topPanelRaw = buildNotchedPanel(w1, w2, topLeft, topRight, 0.25, 0.25);
+  const bottomPanelRaw = buildNotchedPanel(w1, w2, bottomLeft, bottomRight, 0.25, 0.25);
 
-    return {
-      ...panel,
-      p1: { x: panel.p1.x - minX, y: panel.p1.y - minY },
-      p2: { x: panel.p2.x - minX, y: panel.p2.y - minY },
-      p3: { x: panel.p3.x - minX, y: panel.p3.y - minY },
-      p4: { x: panel.p4.x - minX, y: panel.p4.y - minY },
-    };
-  }
-
-  const topPanelRaw = normalizePanel(buildTruePanel(w1, w2, topLeft, topRight));
-  const bottomPanelRaw = normalizePanel(
-    buildTruePanel(w1, w2, bottomLeft, bottomRight)
-  );
-  const leftPanelRaw = normalizePanel(
-    buildTruePanel(h1, h2, leftTop, leftBottom)
-  );
-  const rightPanelRaw = normalizePanel(
-    buildTruePanel(h1, h2, rightTop, rightBottom)
-  );
-
-  function getPanelSize(panel) {
-    const xs = [panel.p1.x, panel.p2.x, panel.p3.x, panel.p4.x];
-    const ys = [panel.p1.y, panel.p2.y, panel.p3.y, panel.p4.y];
-
-    return {
-      width: Math.max(...xs) - Math.min(...xs),
-      height: Math.max(...ys) - Math.min(...ys),
-    };
-  }
-
-    const topBounds = getPanelSize(topPanelRaw);
-    const bottomBounds = getPanelSize(bottomPanelRaw);
-    const leftBounds = getPanelSize(leftPanelRaw);
-    const rightBounds = getPanelSize(rightPanelRaw);
+  // Left & Right panels have 1.0" Pittsburgh pockets on BOTH sides
+  const leftPanelRaw = buildNotchedPanel(h1, h2, leftTop, leftBottom, 1.0, 1.0);
+  const rightPanelRaw = buildNotchedPanel(h1, h2, rightTop, rightBottom, 1.0, 1.0);
 
   const maxPanelWidth = Math.max(
-    topBounds.width,
-    bottomBounds.width,
-    leftBounds.width,
-    rightBounds.width,
+    topPanelRaw.width,
+    bottomPanelRaw.width,
+    leftPanelRaw.width,
+    rightPanelRaw.width,
     1
   );
   const maxPanelHeight = Math.max(
-    topBounds.height,
-    bottomBounds.height,
-    leftBounds.height,
-    rightBounds.height,
+    topPanelRaw.height,
+    bottomPanelRaw.height,
+    leftPanelRaw.height,
+    rightPanelRaw.height,
     1
   );
 
-  const targetPanelWidth = 300;
-  const targetPanelHeight = 200;
+  const targetPanelWidth = 280;
+  const targetPanelHeight = 180;
 
   const scale = Math.min(
     targetPanelWidth / maxPanelWidth,
@@ -813,10 +947,21 @@ export function TransitionFlatPattern({
   function scaleAndPlacePanel(panel, offsetX, offsetY) {
     return {
       ...panel,
+      pts: panel.pts.map((pt) => ({
+        x: pt.x * scale + offsetX,
+        y: pt.y * scale + offsetY,
+      })),
       p1: { x: panel.p1.x * scale + offsetX, y: panel.p1.y * scale + offsetY },
       p2: { x: panel.p2.x * scale + offsetX, y: panel.p2.y * scale + offsetY },
       p3: { x: panel.p3.x * scale + offsetX, y: panel.p3.y * scale + offsetY },
       p4: { x: panel.p4.x * scale + offsetX, y: panel.p4.y * scale + offsetY },
+      bendLines: panel.bendLines.map((bl) => ({
+        ...bl,
+        x1: bl.x1 * scale + offsetX,
+        y1: bl.y1 * scale + offsetY,
+        x2: bl.x2 * scale + offsetX,
+        y2: bl.y2 * scale + offsetY,
+      })),
     };
   }
 
@@ -828,7 +973,7 @@ export function TransitionFlatPattern({
   const topPanel = scaleAndPlacePanel(topPanelRaw, startX, startY);
   const bottomPanel = scaleAndPlacePanel(
     bottomPanelRaw,
-    startX ,
+    startX,
     startY + maxPanelHeight * scale + gapY
   );
   const leftPanel = scaleAndPlacePanel(
@@ -842,47 +987,70 @@ export function TransitionFlatPattern({
     startY + maxPanelHeight * scale + gapY
   );
 
+  function getPanelBounds(panel) {
+    const xs = panel.pts.map((pt) => pt.x);
+    const ys = panel.pts.map((pt) => pt.y);
+    return {
+      minX: Math.min(...xs),
+      maxX: Math.max(...xs),
+      minY: Math.min(...ys),
+      maxY: Math.max(...ys),
+    };
+  }
+
+  function getCombinedBounds(panels) {
+    const bounds = panels.map(getPanelBounds);
+    return {
+      minX: Math.min(...bounds.map((b) => b.minX)),
+      maxX: Math.max(...bounds.map((b) => b.maxX)),
+      minY: Math.min(...bounds.map((b) => b.minY)),
+      maxY: Math.max(...bounds.map((b) => b.maxY)),
+    };
+  }
+
+  const canvasWidth = 1100;
+  const canvasHeight = 580;
+
   const combinedBounds = getCombinedBounds([
-  topPanel,
-  leftPanel,
-  rightPanel,
-  bottomPanel,
-]);
+    topPanel,
+    leftPanel,
+    rightPanel,
+    bottomPanel,
+  ]);
 
-    const contentWidth = combinedBounds.maxX - combinedBounds.minX;
-    const contentHeight = combinedBounds.maxY - combinedBounds.minY;
+  const contentWidth = combinedBounds.maxX - combinedBounds.minX;
+  const contentHeight = combinedBounds.maxY - combinedBounds.minY;
 
-    const drawingOffsetX = 400;
-    const drawingOffsetY = 90;
-    const rightPadding = 40;
-    const bottomPadding = 40;
+  const drawingOffsetX = 400;
+  const drawingOffsetY = 90;
+  const rightPadding = 40;
+  const bottomPadding = 40;
 
-    const fitScale = Math.min(
-      (canvasWidth - drawingOffsetX - rightPadding) / Math.max(contentWidth, 1),
-      (canvasHeight - drawingOffsetY - bottomPadding) / Math.max(contentHeight, 1),
-      1
-    );
-
+  const fitScale = Math.min(
+    (canvasWidth - drawingOffsetX - rightPadding) / Math.max(contentWidth, 1),
+    (canvasHeight - drawingOffsetY - bottomPadding) / Math.max(contentHeight, 1),
+    1
+  );
 
   function fitPanelToCanvas(panel) {
+    const mapPt = (pt) => ({
+      x: (pt.x - combinedBounds.minX) * fitScale + drawingOffsetX,
+      y: (pt.y - combinedBounds.minY) * fitScale + drawingOffsetY,
+    });
     return {
-        ...panel,
-        p1: {
-        x: (panel.p1.x - combinedBounds.minX) * fitScale + drawingOffsetX,
-        y: (panel.p1.y - combinedBounds.minY) * fitScale + drawingOffsetY,
-        },
-        p2: {
-        x: (panel.p2.x - combinedBounds.minX) * fitScale + drawingOffsetX,
-        y: (panel.p2.y - combinedBounds.minY) * fitScale + drawingOffsetY,
-        },
-        p3: {
-        x: (panel.p3.x - combinedBounds.minX) * fitScale + drawingOffsetX,
-        y: (panel.p3.y - combinedBounds.minY) * fitScale + drawingOffsetY,
-        },
-        p4: {
-        x: (panel.p4.x - combinedBounds.minX) * fitScale + drawingOffsetX,
-        y: (panel.p4.y - combinedBounds.minY) * fitScale + drawingOffsetY,
-        },
+      ...panel,
+      pts: panel.pts.map(mapPt),
+      p1: mapPt(panel.p1),
+      p2: mapPt(panel.p2),
+      p3: mapPt(panel.p3),
+      p4: mapPt(panel.p4),
+      bendLines: panel.bendLines.map((bl) => ({
+        ...bl,
+        x1: (bl.x1 - combinedBounds.minX) * fitScale + drawingOffsetX,
+        y1: (bl.y1 - combinedBounds.minY) * fitScale + drawingOffsetY,
+        x2: (bl.x2 - combinedBounds.minX) * fitScale + drawingOffsetX,
+        y2: (bl.y2 - combinedBounds.minY) * fitScale + drawingOffsetY,
+      })),
     };
   }
 
@@ -891,14 +1059,9 @@ export function TransitionFlatPattern({
   const fittedRightPanel = fitPanelToCanvas(rightPanel);
   const fittedBottomPanel = fitPanelToCanvas(bottomPanel);
 
-  function panelPath(panel) {
-    return `
-      M ${panel.p1.x} ${panel.p1.y}
-      L ${panel.p2.x} ${panel.p2.y}
-      L ${panel.p3.x} ${panel.p3.y}
-      L ${panel.p4.x} ${panel.p4.y}
-      Z
-    `;
+  function panelPath(pts) {
+    if (!pts || pts.length === 0) return "";
+    return `M ${pts[0].x} ${pts[0].y} ` + pts.slice(1).map((pt) => `L ${pt.x} ${pt.y}`).join(" ") + " Z";
   }
 
   function renderPanel(panel, label, color = "#F9FAFB") {
@@ -915,20 +1078,36 @@ export function TransitionFlatPattern({
     const rightMidY = (panel.p2.y + panel.p3.y) / 2;
 
     const labelX = (panel.p1.x + panel.p2.x) / 2;
-    const labelY = Math.min(panel.p1.y, panel.p2.y) - 14;
+    const labelY = Math.min(panel.p1.y, panel.p2.y) - 18;
 
     return (
       <g key={label}>
+        {/* Cut Contour */}
         <path
-          d={panelPath(panel)}
+          d={panelPath(panel.pts)}
           fill={color}
           stroke="#111827"
           strokeWidth="2"
+          strokeLinejoin="round"
         />
+
+        {/* Dashed Bend Lines */}
+        {panel.bendLines.map((bl, i) => (
+          <line
+            key={i}
+            x1={bl.x1}
+            y1={bl.y1}
+            x2={bl.x2}
+            y2={bl.y2}
+            stroke={bl.color}
+            strokeWidth="1.5"
+            strokeDasharray="4 3"
+          />
+        ))}
 
         <text
           x={labelX}
-          y={labelY - 10}
+          y={labelY}
           textAnchor="middle"
           fontSize="14"
           fontWeight="600"
@@ -939,40 +1118,44 @@ export function TransitionFlatPattern({
 
         <text
           x={topMidX}
-          y={topMidY - 8}
+          y={topMidY - 4}
           textAnchor="middle"
-          fontSize="12"
-          fill="#B91C1C"
+          fontSize="11"
+          fontWeight="500"
+          fill="#b91c1c"
         >
           {toInchesFraction(panel.lengths.top)}
         </text>
 
         <text
           x={bottomMidX}
-          y={bottomMidY + 18}
+          y={bottomMidY + 14}
           textAnchor="middle"
-          fontSize="12"
-          fill="#B91C1C"
+          fontSize="11"
+          fontWeight="500"
+          fill="#b91c1c"
         >
           {toInchesFraction(panel.lengths.bottom)}
         </text>
 
         <text
-          x={leftMidX - 10}
-          y={leftMidY + 7}
+          x={leftMidX - 8}
+          y={leftMidY + 4}
           textAnchor="end"
-          fontSize="12"
-          fill="#1F2937"
+          fontSize="11"
+          fontWeight="500"
+          fill="#1f2937"
         >
           {toInchesFraction(panel.lengths.left)}
         </text>
 
         <text
-          x={rightMidX + 10}
-          y={rightMidY - 7}
+          x={rightMidX + 8}
+          y={rightMidY + 4}
           textAnchor="start"
-          fontSize="12"
-          fill="#1F2937"
+          fontSize="11"
+          fontWeight="500"
+          fill="#1f2937"
         >
           {toInchesFraction(panel.lengths.right)}
         </text>
@@ -985,15 +1168,15 @@ export function TransitionFlatPattern({
       dx === 0
         ? "centered"
         : dx < 0
-        ? `left ${Math.abs(dx).toFixed(1)}`
-        : `right ${Math.abs(dx).toFixed(1)}`;
+        ? `left ${Math.abs(dx).toFixed(1)}"`
+        : `right ${Math.abs(dx).toFixed(1)}"`;
 
     const vertical =
       dy === 0
         ? "centered"
         : dy < 0
-        ? `up ${Math.abs(dy).toFixed(1)}`
-        : `down ${Math.abs(dy).toFixed(1)}`;
+        ? `up ${Math.abs(dy).toFixed(1)}"`
+        : `down ${Math.abs(dy).toFixed(1)}"`;
 
     return `Width offset: ${horizontal}, Height offset: ${vertical}`;
   }
@@ -1001,49 +1184,49 @@ export function TransitionFlatPattern({
   return (
     <div className={className}>
       <svg
-        viewBox="0 0 1100 560"
-        className="w-full h-auto border rounded-xl bg-white"
+        viewBox="0 0 1100 580"
+        className="w-full h-auto border rounded-xl bg-white shadow-xs"
       >
         <text x="30" y="26" fontSize="18" fontWeight="600" fill="#111827">
           Transition Flat Pattern
         </text>
 
-        <text x="30" y="52" fontSize="12" fill="#4B5563">
+        <text x="30" y="50" fontSize="12" fill="#4b5563">
           Justification = {justification}, IN = {w1 || "-"} × {h1 || "-"}, OUT ={" "}
-          {w2 || "-"} × {h2 || "-"}, L = {L || "-"}
+          {w2 || "-"} × {h2 || "-"}, Ordered L = {rawL || "-"}″ (Body Height = {lBody}″)
         </text>
 
-        <text x="30" y="70" fontSize="12" fill="#4B5563">
-          {offsetText()}
+        <text x="30" y="68" fontSize="12" fill="#4b5563">
+          {offsetText()} | Allowances: 1″ Cleat flanges (transverse), 1″ Pittsburgh pockets (Left &amp; Right), 1/4″ Pittsburgh flanges (Top &amp; Bottom)
         </text>
 
-    {renderPanel(fittedTopPanel, "Top Panel", "#F9FAFB")}
-    {renderPanel(fittedLeftPanel, "Left Panel", "#F9FAFB")}
-    {renderPanel(fittedRightPanel, "Right Panel", "#F9FAFB")}
-    {renderPanel(fittedBottomPanel, "Bottom Panel", "#F3F4F6")}
+        {renderPanel(fittedTopPanel, "Top Panel", "#F9FAFB")}
+        {renderPanel(fittedLeftPanel, "Left Panel", "#F9FAFB")}
+        {renderPanel(fittedRightPanel, "Right Panel", "#F9FAFB")}
+        {renderPanel(fittedBottomPanel, "Bottom Panel", "#F3F4F6")}
 
-        <text x="30" y="470" fontSize="13" fill="#374151">
+        <text x="30" y="480" fontSize="13" fill="#374151">
           Top Panel: top {toInchesFraction(topPanelRaw.lengths.top)}, bottom{" "}
           {toInchesFraction(topPanelRaw.lengths.bottom)}, left{" "}
           {toInchesFraction(topPanelRaw.lengths.left)}, right{" "}
           {toInchesFraction(topPanelRaw.lengths.right)}
         </text>
 
-        <text x="30" y="490" fontSize="13" fill="#374151">
+        <text x="30" y="502" fontSize="13" fill="#374151">
           Bottom Panel: top {toInchesFraction(bottomPanelRaw.lengths.top)}, bottom{" "}
           {toInchesFraction(bottomPanelRaw.lengths.bottom)}, left{" "}
           {toInchesFraction(bottomPanelRaw.lengths.left)}, right{" "}
           {toInchesFraction(bottomPanelRaw.lengths.right)}
         </text>
 
-        <text x="30" y="510" fontSize="13" fill="#374151">
+        <text x="30" y="524" fontSize="13" fill="#374151">
           Left Panel: top {toInchesFraction(leftPanelRaw.lengths.top)}, bottom{" "}
           {toInchesFraction(leftPanelRaw.lengths.bottom)}, left{" "}
           {toInchesFraction(leftPanelRaw.lengths.left)}, right{" "}
           {toInchesFraction(leftPanelRaw.lengths.right)}
         </text>
 
-        <text x="30" y="530" fontSize="13" fill="#374151">
+        <text x="30" y="546" fontSize="13" fill="#374151">
           Right Panel: top {toInchesFraction(rightPanelRaw.lengths.top)}, bottom{" "}
           {toInchesFraction(rightPanelRaw.lengths.bottom)}, left{" "}
           {toInchesFraction(rightPanelRaw.lengths.left)}, right{" "}
@@ -1523,37 +1706,163 @@ export function OffsetFlatPattern({
 export function EndCupFlatPattern({
   width = "",
   height = "",
+  flange = 1,
   className = "w-full max-w-sm",
 }) {
-  const w = Number(width) || 0;
-  const h = Number(height) || 0;
+  const w = Number(width) || 14;
+  const h = Number(height) || 12;
+  const f = flange !== undefined && flange !== "" ? Number(flange) : 1;
+
+  // Visual scaling to fit nicely in 400x300 canvas
+  const padding = 45;
+  const availW = 400 - 2 * padding;
+  const availH = 300 - 2 * padding;
+
+  const effF = Math.min(f, (w - 0.1) / 2, (h - 0.1) / 2);
+  const totalW = w + 2 * effF;
+  const totalH = h + 2 * effF;
+
+  const scale = Math.min(availW / totalW, availH / totalH);
+  const drawW = w * scale;
+  const drawH = h * scale;
+  const drawF = effF * scale;
+  const drawTotalW = totalW * scale;
+  const drawTotalH = totalH * scale;
+
+  const originX = (400 - drawTotalW) / 2;
+  const originY = (300 - drawTotalH) / 2;
+
+  // In SVG coordinates (Y down):
+  // Inner rectangle corners:
+  const ix = originX + drawF;
+  const iy = originY + drawF;
+  const iw = drawW;
+  const ih = drawH;
+
+  // Cut contour points:
+  const x1 = originX;
+  const x2 = originX + drawF;
+  const x3 = originX + 2 * drawF;
+  const x4 = originX + drawTotalW - 2 * drawF;
+  const x5 = originX + drawTotalW - drawF;
+  const x6 = originX + drawTotalW;
+
+  const y1 = originY;
+  const y2 = originY + drawF;
+  const y3 = originY + 2 * drawF;
+  const y4 = originY + drawTotalH - 2 * drawF;
+  const y5 = originY + drawTotalH - drawF;
+  const y6 = originY + drawTotalH;
+
+  let cutPath = "";
+  if (effF > 0.001) {
+    cutPath = [
+      `M ${x3} ${y1}`,
+      `L ${x4} ${y1}`,
+      `L ${x5} ${y2}`,
+      `L ${x6} ${y3}`,
+      `L ${x6} ${y4}`,
+      `L ${x5} ${y5}`,
+      `L ${x4} ${y6}`,
+      `L ${x3} ${y6}`,
+      `L ${x2} ${y5}`,
+      `L ${x1} ${y4}`,
+      `L ${x1} ${y3}`,
+      `L ${x2} ${y2}`,
+      `Z`,
+    ].join(" ");
+  } else {
+    cutPath = `M ${originX} ${originY} L ${originX + drawW} ${originY} L ${originX + drawW} ${originY + drawH} L ${originX} ${originY + drawH} Z`;
+  }
+
+  const cx = originX + drawTotalW / 2;
+  const cy = originY + drawTotalH / 2;
 
   return (
     <div className={className}>
       <svg
         viewBox="0 0 400 300"
-        className="w-full h-auto border rounded-xl bg-white"
+        className="w-full h-auto border rounded-xl bg-white shadow-xs"
       >
-        <text x="20" y="20" fontSize="16">
-          End Cup Flat Pattern
+        <text x="20" y="24" fontSize="13" fontWeight="600" fill="#374151">
+          End Cap Flat Pattern
         </text>
 
-        <rect
-          x="80"
-          y="60"
-          width="200"
-          height="150"
-          fill="#F9FAFB"
-          stroke="#111827"
-          strokeWidth="2"
+        {/* Centerlines (Dash-dot) */}
+        <line
+          x1="20"
+          y1={cy}
+          x2="380"
+          y2={cy}
+          stroke="#cbd5e1"
+          strokeWidth="1"
+          strokeDasharray="16 4 3 4"
+        />
+        <line
+          x1={cx}
+          y1="25"
+          x2={cx}
+          y2="285"
+          stroke="#cbd5e1"
+          strokeWidth="1"
+          strokeDasharray="16 4 3 4"
         />
 
-        <text x="180" y="50" textAnchor="middle" fontSize="12">
-          {w}
+        {/* Outer Cut Contour */}
+        <path
+          d={cutPath}
+          fill="#f8fafc"
+          stroke="#0f172a"
+          strokeWidth="2.2"
+          strokeLinejoin="round"
+        />
+
+        {/* Bend Lines (Fold marks) */}
+        {effF > 0.001 && (
+          <g stroke="#dc2626" strokeWidth="1.2" strokeDasharray="5 3">
+            <line x1={ix} y1={iy} x2={ix + iw} y2={iy} />
+            <line x1={ix + iw} y1={iy} x2={ix + iw} y2={iy + ih} />
+            <line x1={ix + iw} y1={iy + ih} x2={ix} y2={iy + ih} />
+            <line x1={ix} y1={iy + ih} x2={ix} y2={iy} />
+          </g>
+        )}
+
+        {/* Dimension Labels */}
+        <text
+          x={cx}
+          y={cy}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize="13"
+          fontWeight="600"
+          fill="#1e293b"
+        >
+          {w}&quot; × {h}&quot;
+          {f > 0 ? ` (Flange: ${f}″)` : ""}
         </text>
 
-        <text x="290" y="140" fontSize="12">
-          {h}
+        {/* Width label on top */}
+        <text
+          x={cx}
+          y={originY - 8}
+          textAnchor="middle"
+          fontSize="11"
+          fontWeight="500"
+          fill="#475569"
+        >
+          W = {w}&quot; (Total: {Math.round(totalW * 100) / 100}&quot;)
+        </text>
+
+        {/* Height label on right */}
+        <text
+          x={originX + drawTotalW + 8}
+          y={cy}
+          dominantBaseline="central"
+          fontSize="11"
+          fontWeight="500"
+          fill="#475569"
+        >
+          H = {h}&quot;
         </text>
       </svg>
     </div>

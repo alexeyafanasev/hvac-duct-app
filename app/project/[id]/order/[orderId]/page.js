@@ -98,8 +98,9 @@ function createEmptyItem(type) {
         name: "End Cup",
         width: "",
         height: "",
+        flange: "1",
     };
-    }
+  }
 
   return {
     ...base,
@@ -218,6 +219,7 @@ function FittingPreview({ item }) {
             <EndCupFlatPattern
                 width={item.width}
                 height={item.height}
+                flange={item.flange}
             />
             </div>
         );
@@ -317,10 +319,11 @@ function FabricationDrawingForPdf({ item }) {
         <EndCupFlatPattern
         width={item.width}
         height={item.height}
+        flange={item.flange}
         className="w-[900px]"
         />
     );
-    }
+  }
 
   return <div>Unsupported drawing</div>;
 }
@@ -1025,9 +1028,10 @@ const handleSendOrderEmail = () => {
                         <>
                             <div>W: {item.width || "-"}</div>
                             <div>H: {item.height || "-"}</div>
+                            <div>Flange: {item.flange !== undefined && item.flange !== "" ? item.flange : 1}&quot;</div>
                             <div>Qty: {item.quantity || 1}</div>
                         </>
-                        )}
+                    )}
 
                     </div>
                 </div>
@@ -1388,7 +1392,7 @@ const handleSendOrderEmail = () => {
             {itemType === "endcup" && (
             <>
                 <div>
-                <label className="text-sm text-gray-700">Width</label>
+                <label className="text-sm text-gray-700">Width (in)</label>
                 <input
                     type="number"
                     value={newItem.width || ""}
@@ -1400,7 +1404,7 @@ const handleSendOrderEmail = () => {
                 </div>
 
                 <div>
-                <label className="text-sm text-gray-700">Height</label>
+                <label className="text-sm text-gray-700">Height (in)</label>
                 <input
                     type="number"
                     value={newItem.height || ""}
@@ -1409,6 +1413,24 @@ const handleSendOrderEmail = () => {
                     }
                     className="w-full border p-2 rounded-lg"
                 />
+                </div>
+
+                <div>
+                <label className="text-sm text-gray-700">Flange (in)</label>
+                <input
+                    type="number"
+                    step="0.125"
+                    min="0"
+                    placeholder="1.0"
+                    value={newItem.flange !== undefined ? newItem.flange : "1"}
+                    onChange={(e) =>
+                    setNewItem({ ...newItem, flange: e.target.value })
+                    }
+                    className="w-full border p-2 rounded-lg"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Default: 1.0&quot; with 45° miter notches meeting at corners. Enter 0 for flat plate.
+                </p>
                 </div>
             </>
             )}
